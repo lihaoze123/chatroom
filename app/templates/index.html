@@ -1,3 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}首页 - 聊天室{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="jumbotron bg-light p-5 rounded">
+            <h1 class="display-4">欢迎来到聊天室！</h1>
+            {% if current_user.is_authenticated %}
+                <p class="lead">你好，{{ current_user.username }}！欢迎回来。</p>
+                <a class="btn btn-primary btn-lg" href="{{ url_for('chat.index') }}" role="button">进入聊天室</a>
+            {% else %}
+                <p class="lead">请先登录或注册以开始聊天。</p>
+                <a class="btn btn-primary btn-lg me-2" href="{{ url_for('auth.login') }}" role="button">登录</a>
+                <a class="btn btn-outline-primary btn-lg" href="{{ url_for('auth.register') }}" role="button">注册</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
 <html lang="en">
 <head>
     <meta charset="UTF-8">
