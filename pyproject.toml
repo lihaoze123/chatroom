@@ -7,7 +7,10 @@ requires-python = ">=3.13"
 dependencies = [
     "eventlet>=0.40.0",
     "flask>=3.1.1",
+    "flask-cors>=6.0.0",
     "flask-login>=0.6.3",
     "flask-socketio>=5.5.1",
     "flask-sqlalchemy>=3.1.1",
+    "flask-wtf>=1.2.2",
+    "requests>=2.32.4",
 ]

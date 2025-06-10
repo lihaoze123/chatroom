@@ -1,61 +1,104 @@
 {% extends "base.html" %}
 
-{% block title %}首页 - 聊天室{% endblock %}
-
 {% block content %}
-<div class="jumbotron p-5 mb-4">
-    <div class="container-fluid py-5">
-        <h1 class="display-5 fw-bold">欢迎来到聊天室</h1>
-        <p class="col-md-8 fs-4">与朋友们实时聊天，分享你的想法和感受。</p>
-        {% if current_user.is_authenticated %}
-            <a class="btn btn-primary btn-lg" href="{{ url_for('chat.room') }}" role="button">进入聊天室</a>
-        {% else %}
-            <a class="btn btn-primary btn-lg" href="{{ url_for('auth.register') }}" role="button">立即注册</a>
-            <a class="btn btn-outline-light btn-lg ms-2" href="{{ url_for('auth.login') }}" role="button">登录</a>
-        {% endif %}
-    </div>
-</div>
-
-<div class="row">
-    <div class="col-md-4 mb-4">
-        <div class="card feature-card fade-in-up h-100">
-            <div class="card-body">
-                <div class="mb-3">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M8 12H16M8 8H16M8 16H13M7 4V2C7 1.44772 7.44772 1 8 1H16C16.5523 1 17 1.44772 17 2V4H19C20.1046 4 21 4.89543 21 6V18C21 19.1046 20.1046 20 19 20H5C3.89543 20 3 19.1046 3 18V6C3 4.89543 3.89543 4 5 4H7Z" stroke="#667eea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="jumbotron bg-white p-5 rounded shadow">
+            <h1 class="display-4 text-center mb-4">
+                <i class="fas fa-comments text-primary"></i> 
+                欢迎来到聊天室
+            </h1>
+            <p class="lead text-center mb-4">
+                一个现代化的实时Web聊天应用，支持多房间聊天、在线状态显示和实时消息推送。
+            </p>
+            
+            <div class="row text-center mb-4">
+                <div class="col-md-4">
+                    <div class="feature-box p-3">
+                        <i class="fas fa-bolt fa-3x text-warning mb-3"></i>
+                        <h5>实时通信</h5>
+                        <p class="text-muted">基于WebSocket的实时消息推送，无需刷新页面</p>
+                    </div>
                 </div>
-                <h5 class="card-title">💬 实时聊天</h5>
-                <p class="card-text">与其他用户进行实时对话，体验流畅的聊天体验。支持多人同时在线聊天。</p>
+                <div class="col-md-4">
+                    <div class="feature-box p-3">
+                        <i class="fas fa-users fa-3x text-success mb-3"></i>
+                        <h5>多房间支持</h5>
+                        <p class="text-muted">创建或加入不同的聊天室，与志同道合的朋友交流</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-box p-3">
+                        <i class="fas fa-shield-alt fa-3x text-info mb-3"></i>
+                        <h5>安全可靠</h5>
+                        <p class="text-muted">用户认证和权限管理，保护您的隐私和数据安全</p>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
-    <div class="col-md-4 mb-4">
-        <div class="card feature-card fade-in-up h-100" style="animation-delay: 0.2s;">
-            <div class="card-body">
-                <div class="mb-3">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z" stroke="#667eea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </div>
-                <h5 class="card-title">✨ 用户友好</h5>
-                <p class="card-text">简洁直观的界面设计，让聊天变得更加轻松愉快。现代化的UI设计理念。</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4 mb-4">
-        <div class="card feature-card fade-in-up h-100" style="animation-delay: 0.4s;">
-            <div class="card-body">
-                <div class="mb-3">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="#667eea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M8 12L11 15L16 9" stroke="#667eea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </div>
-                <h5 class="card-title">🔒 安全可靠</h5>
-                <p class="card-text">采用现代化的安全技术，保护您的隐私和数据安全。端到端加密保障。</p>
+            
+            <div class="text-center">
+                {% if current_user.is_authenticated %}
+                    <a class="btn btn-primary btn-lg me-3" href="{{ url_for('chat.rooms') }}">
+                        <i class="fas fa-comments"></i> 进入聊天室
+                    </a>
+                {% else %}
+                    <a class="btn btn-primary btn-lg me-3" href="{{ url_for('auth.register') }}">
+                        <i class="fas fa-user-plus"></i> 立即注册
+                    </a>
+                    <a class="btn btn-outline-primary btn-lg" href="{{ url_for('auth.login') }}">
+                        <i class="fas fa-sign-in-alt"></i> 已有账号？登录
+                    </a>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
+
+<div class="row mt-5">
+    <div class="col-md-12">
+        <h3 class="text-center mb-4">主要功能</h3>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-user-check text-primary"></i> 用户认证
+                        </h5>
+                        <p class="card-text">安全的注册、登录和登出功能，保护用户账户安全。</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-comments text-success"></i> 实时消息
+                        </h5>
+                        <p class="card-text">基于WebSocket的多用户实时文本通信，消息即时送达。</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-door-open text-info"></i> 房间管理
+                        </h5>
+                        <p class="card-text">支持创建、加入和离开不同的聊天室，灵活的房间管理。</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-circle text-warning"></i> 在线状态
+                        </h5>
+                        <p class="card-text">实时显示用户的在线状态，了解谁正在线上。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
