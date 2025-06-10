@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}聊天室列表 - 聊天室{% endblock %}
+
+{% block head %}
+<style>
+    .room-card {
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .room-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .room-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        color: #667eea;
+    }
+    
+    .create-room-card {
+        border: 2px dashed #dee2e6;
+        background-color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .create-room-card:hover {
+        border-color: #667eea;
+        background-color: rgba(255, 255, 255, 0.9);
+    }
+    
+    .room-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mb-4">
+    <div class="col-md-8">
+        <div class="card fade-in-up">
+            <div class="card-header">
+                <h4 class="text-center mb-0">💬 聊天室列表</h4>
+                <p class="text-center mb-0 mt-2" style="opacity: 0.9; font-size: 0.9rem;">选择一个聊天室加入，或创建新的聊天室</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    {% if rooms %}
+        {% for room in rooms %}
+        <div class="col-md-4 mb-4">
+            <div class="card room-card fade-in-up h-100" style="animation-delay: {{ loop.index0 * 0.2 }}s;" onclick="window.location.href='{{ url_for(\'chat.room\', room_name=room.name) }}'">
+                <div class="card-body text-center">
+                    <span class="room-badge badge bg-success">在线</span>
+                    <div class="room-icon">
+                        {% set icons = ['🌎', '💻', '🎮', '🎯', '🎨', '📚', '🎵', '🎬', '🍔', '🏆'] %}
+                        {{ icons[loop.index0 % icons|length] }}
+                    </div>
+                    <h5 class="card-title">{{ room.name }}</h5>
+                    <p class="card-text">{{ room.description or '这是一个聊天室，点击加入聊天。' }}</p>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <small class="text-muted">创建者: {{ room.creator.username if room.creator else '系统' }}</small>
+                        <button class="btn btn-primary btn-sm">加入</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <!-- 默认聊天室 -->
+        <div class="col-md-4 mb-4">
+            <div class="card room-card fade-in-up h-100" onclick="window.location.href='{{ url_for(\'chat.room\', room_name=\'public\') }}'">
+                <div class="card-body text-center">
+                    <span class="room-badge badge bg-success">在线</span>
+                    <div class="room-icon">🌎</div>
+                    <h5 class="card-title">公共聊天室</h5>
+                    <p class="card-text">所有人都可以加入的公共聊天空间，随时与在线用户交流。</p>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <small class="text-muted">系统默认聊天室</small>
+                        <button class="btn btn-primary btn-sm">加入</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+    
+    <!-- 创建新聊天室 -->
+    <div class="col-md-4 mb-4">
+        <div class="card room-card create-room-card fade-in-up h-100" style="animation-delay: 0.6s;" data-bs-toggle="modal" data-bs-target="#createRoomModal">
+            <div class="card-body text-center">
+                <div class="room-icon">➕</div>
+                <h5 class="card-title">创建新聊天室</h5>
+                <p class="card-text">创建您自己的聊天室，邀请朋友一起交流。</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 创建聊天室模态框 -->
+<div class="modal fade" id="createRoomModal" tabindex="-1" aria-labelledby="createRoomModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createRoomModalLabel">创建新聊天室</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createRoomForm" action="{{ url_for('chat.create_room') }}" method="POST">
+                    <div class="mb-3">
+                        <label for="roomName" class="form-label">聊天室名称</label>
+                        <input type="text" class="form-control" id="roomName" name="roomName" placeholder="输入聊天室名称" required>
+                        <div class="form-text">聊天室名称将用作URL的一部分，请使用英文字母、数字和下划线</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="roomDescription" class="form-label">聊天室描述</label>
+                        <textarea class="form-control" id="roomDescription" name="roomDescription" rows="3" placeholder="简单描述一下这个聊天室"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">聊天室类型</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="roomType" id="publicRoom" value="public" checked>
+                            <label class="form-check-label" for="publicRoom">
+                                公开 - 所有人可见
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="roomType" id="privateRoom" value="private">
+                            <label class="form-check-label" for="privateRoom">
+                                私密 - 仅邀请可见
+                            </label>
+                        </div>
+                    </div>
+                    <div class="modal-footer px-0 pb-0">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-primary">创建</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 表单验证
+    document.addEventListener('DOMContentLoaded', function() {
+        const createRoomForm = document.getElementById('createRoomForm');
+        if (createRoomForm) {
+            createRoomForm.addEventListener('submit', function(event) {
+                const roomName = document.getElementById('roomName').value.trim();
+                if (!roomName) {
+                    event.preventDefault();
+                    alert('请输入聊天室名称');
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
