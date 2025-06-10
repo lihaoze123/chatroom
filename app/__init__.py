@@ -1,14 +1,14 @@
-# app/__init__.py
-# Flask应用初始化文件
-
-import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
+from flask_socketio import SocketIO
+import os
 
 # 初始化扩展
 db = SQLAlchemy()
 login_manager = LoginManager()
+login_manager.login_view = 'auth.login'
+socketio = SocketIO()
 
 def create_app(config_class=None):
     """应用工厂函数"""
@@ -69,6 +69,9 @@ def _init_extensions(app):
     
     # 初始化登录管理器
     login_manager.init_app(app)
+    socketio.init_app(app, cors_allowed_origins='*')
+
+    # 配置 login_manager
     login_manager.login_view = 'auth.login'
     login_manager.login_message = '请先登录以访问此页面。'
     login_manager.login_message_category = 'info'
@@ -92,24 +95,18 @@ def _register_blueprints(app):
     except ImportError:
         app.logger.warning("主页蓝图导入失败")
     
-    try:
-        # 注册认证蓝图
-        from app.auth import bp as auth_bp
-        app.register_blueprint(auth_bp, url_prefix='/auth')
-    except ImportError:
-        app.logger.warning("认证蓝图导入失败")
-    
-    try:
-        # 注册聊天蓝图
-        from app.chat import bp as chat_bp
-        app.register_blueprint(chat_bp, url_prefix='/chat')
-    except ImportError:
-        app.logger.warning("聊天蓝图导入失败")
+    # 注册蓝图
+    from app.main import bp as main_bp
+    app.register_blueprint(main_bp)
 
-def _setup_logging(app):
-    """设置应用日志"""
-    from app.utils import setup_logging
-    setup_logging(app)
+    from app.auth import bp as auth_bp
+    app.register_blueprint(auth_bp, url_prefix='/auth')
+
+    from app.chat import bp as chat_bp
+    app.register_blueprint(chat_bp, url_prefix='/chat')
+
+    # 注册 Socket.IO 事件处理程序
+    from app.chat import events
 
 def _create_database_tables(app):
     """创建数据库表"""
@@ -145,7 +142,4 @@ def _register_error_handlers(app):
             return jsonify({'error': '访问被禁止'}), 403
         return render_template('errors/403.html'), 403
 
-def _register_cli_commands(app):
-    """注册CLI命令"""
-    from app.cli import register_commands
-    register_commands(app)
+from app import models

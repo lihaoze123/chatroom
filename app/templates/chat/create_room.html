@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-2xl mx-auto">
+        <div class="bg-white rounded-lg shadow-lg p-8">
+            <div class="flex items-center justify-between mb-8">
+                <h1 class="text-2xl font-bold text-gray-800">创建新聊天室</h1>
+                <a href="{{ url_for('chat.index') }}" class="text-blue-500 hover:text-blue-600 transition-colors">
+                    返回聊天室列表
+                </a>
+            </div>
+
+            <form method="post" class="space-y-6">
+                {{ form.hidden_tag() }}
+
+                <div class="space-y-2">
+                    <label for="name" class="block text-sm font-medium text-gray-700">聊天室名称</label>
+                    {{ form.name(class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:border-blue-500", placeholder="输入聊天室名称") }}
+                    {% if form.name.errors %}
+                    <div class="text-red-500 text-sm">
+                        {% for error in form.name.errors %}
+                        <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="space-y-2">
+                    <label for="description" class="block text-sm font-medium text-gray-700">描述</label>
+                    {{ form.description(class="w-full rounded-lg border border-gray-300 px-4 py-2 h-32 resize-none focus:outline-none focus:border-blue-500", placeholder="描述这个聊天室...") }}
+                    {% if form.description.errors %}
+                    <div class="text-red-500 text-sm">
+                        {% for error in form.description.errors %}
+                        <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="flex justify-end space-x-4">
+                    <a href="{{ url_for('chat.index') }}" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                        取消
+                    </a>
+                    <button type="submit" class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                        创建聊天室
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
