@@ -1,0 +1,426 @@
+{% extends "base.html" %}
+
+{% block title %}{{ room_name }} - 聊天室{% endblock %}
+
+{% block head %}
+<style>
+    .chat-container {
+        height: calc(100vh - 200px);
+        min-height: 500px;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .chat-header {
+        padding: 15px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+    
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 15px;
+        background-color: rgba(248, 249, 250, 0.7);
+    }
+    
+    .chat-input {
+        padding: 15px;
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+        background-color: rgba(255, 255, 255, 0.9);
+    }
+    
+    .message {
+        margin-bottom: 15px;
+        animation: fadeIn 0.5s ease;
+    }
+    
+    .message-content {
+        display: inline-block;
+        padding: 8px 15px;
+        border-radius: 18px;
+        max-width: 75%;
+        word-break: break-word;
+    }
+    
+    .message-time {
+        font-size: 0.75rem;
+        color: #6c757d;
+        margin-top: 5px;
+    }
+    
+    .message-own {
+        text-align: right;
+    }
+    
+    .message-own .message-content {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .message-other .message-content {
+        background-color: #f1f0f0;
+        color: #212529;
+    }
+    
+    .user-list {
+        height: calc(100vh - 200px);
+        min-height: 500px;
+        overflow-y: auto;
+        background-color: rgba(248, 249, 250, 0.7);
+        border-radius: 0.25rem;
+    }
+    
+    .user-item {
+        padding: 10px 15px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        display: flex;
+        align-items: center;
+    }
+    
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: #667eea;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-right: 10px;
+    }
+    
+    .user-status {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-left: auto;
+    }
+    
+    .status-online {
+        background-color: #28a745;
+    }
+    
+    .status-offline {
+        background-color: #dc3545;
+    }
+    
+    .typing-indicator {
+        font-size: 0.8rem;
+        color: #6c757d;
+        font-style: italic;
+        height: 20px;
+        margin-top: -10px;
+        margin-bottom: 10px;
+    }
+    
+    .emoji-picker-container {
+        position: absolute;
+        bottom: 70px;
+        right: 15px;
+        z-index: 1000;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* 响应式调整 */
+    @media (max-width: 767.98px) {
+        .chat-container, .user-list {
+            height: calc(100vh - 150px);
+            min-height: 400px;
+        }
+        
+        .user-list {
+            margin-bottom: 20px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb" class="fade-in-up">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">首页</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('chat.index') }}">聊天室列表</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ room_name }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 聊天区域 -->
+    <div class="col-md-9 mb-4">
+        <div class="card fade-in-up">
+            <div class="chat-container">
+                <div class="chat-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0">{{ room_name }}</h5>
+                            <small class="text-muted">在线用户: <span id="online-count">0</span></small>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary" id="btnLeave">
+                                <i class="bi bi-box-arrow-left"></i> 离开
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chat-messages" id="chat-messages">
+                    <!-- 历史消息 -->
+                    {% if messages %}
+                        {% for message in messages %}
+                        <div class="message {% if message.user.username == current_user.username %}message-own{% else %}message-other{% endif %}">
+                            {% if message.user.username != current_user.username %}
+                            <div class="message-sender">{{ message.user.username }}</div>
+                            {% endif %}
+                            <div class="message-content">{{ message.content }}</div>
+                            <div class="message-time">{{ message.timestamp.strftime('%H:%M') }}</div>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                
+                <div class="typing-indicator" id="typing-indicator"></div>
+                
+                <div class="chat-input">
+                    <form id="message-form">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="message-input" placeholder="输入消息..." autocomplete="off">
+                            <button type="button" class="btn btn-outline-secondary" id="emoji-button">
+                                <i class="bi bi-emoji-smile"></i>
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-send"></i> 发送
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 用户列表 -->
+    <div class="col-md-3 mb-4">
+        <div class="card fade-in-up" style="animation-delay: 0.2s;">
+            <div class="card-header">
+                <h5 class="mb-0">在线用户</h5>
+            </div>
+            <div class="user-list" id="user-list">
+                <!-- 用户列表将通过JavaScript动态添加 -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 表情选择器容器 -->
+<div class="emoji-picker-container d-none" id="emoji-picker-container">
+    <div class="card">
+        <div class="card-body p-2">
+            <div class="d-flex flex-wrap">
+                {% for emoji in ['😀', '😂', '😊', '😍', '🤔', '😎', '👍', '❤️', '🎉', '🔥', '👋', '🙏', '🤝', '👏', '💯', '🌟'] %}
+                <div class="p-2 emoji-item" style="cursor: pointer;" onclick="insertEmoji('{{ emoji }}')">
+                    {{ emoji }}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<script>
+    // 用户名（从会话中获取）
+    const username = "{{ current_user.username }}";
+    const userId = "{{ current_user.id }}";
+    const roomName = "{{ room_name }}";
+    let socket;
+    let typingTimer;
+    let isTyping = false;
+    
+    // DOM 元素
+    const messagesContainer = document.getElementById('chat-messages');
+    const messageForm = document.getElementById('message-form');
+    const messageInput = document.getElementById('message-input');
+    const userList = document.getElementById('user-list');
+    const onlineCount = document.getElementById('online-count');
+    const typingIndicator = document.getElementById('typing-indicator');
+    const emojiButton = document.getElementById('emoji-button');
+    const emojiPickerContainer = document.getElementById('emoji-picker-container');
+    const btnLeave = document.getElementById('btnLeave');
+    
+    // 初始化
+    document.addEventListener('DOMContentLoaded', () => {
+        // 滚动到最新消息
+        scrollToBottom();
+        // 连接 Socket.IO
+        socket = io();
+        
+        // 加入聊天室
+        socket.emit('join', { username: username, room: roomName });
+        
+        // 接收消息
+        socket.on('message', (data) => {
+            addMessage(data);
+        });
+        
+        // 更新用户列表
+        socket.on('room_users', (data) => {
+            updateUserList(data.users);
+            onlineCount.textContent = data.users.length;
+        });
+        
+        // 用户正在输入
+        socket.on('typing', (data) => {
+            if (data.username !== username) {
+                typingIndicator.textContent = `${data.username} 正在输入...`;
+                
+                // 5秒后清除输入提示
+                clearTimeout(typingTimer);
+                typingTimer = setTimeout(() => {
+                    typingIndicator.textContent = '';
+                }, 5000);
+            }
+        });
+        
+        // 用户停止输入
+        socket.on('stop_typing', (data) => {
+            if (data.username !== username) {
+                typingIndicator.textContent = '';
+            }
+        });
+        
+        // 发送消息
+        messageForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const message = messageInput.value.trim();
+            if (message) {
+                // 发送消息到服务器
+                socket.emit('chat_message', {
+                    username: username,
+                    room: roomName,
+                    message: message,
+                    time: new Date().toISOString()
+                });
+                
+                // 清空输入框
+                messageInput.value = '';
+                messageInput.focus();
+                
+                // 停止输入状态
+                socket.emit('stop_typing', { username: username, room: roomName });
+                isTyping = false;
+            }
+        });
+        
+        // 监听输入事件
+        messageInput.addEventListener('input', () => {
+            if (!isTyping) {
+                socket.emit('typing', { username: username, room: roomName });
+                isTyping = true;
+            }
+            
+            // 重置输入计时器
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(() => {
+                socket.emit('stop_typing', { username: username, room: roomName });
+                isTyping = false;
+            }, 3000);
+        });
+        
+        // 表情按钮点击事件
+        emojiButton.addEventListener('click', () => {
+            emojiPickerContainer.classList.toggle('d-none');
+        });
+        
+        // 点击页面其他地方关闭表情选择器
+        document.addEventListener('click', (e) => {
+            if (!emojiButton.contains(e.target) && !emojiPickerContainer.contains(e.target)) {
+                emojiPickerContainer.classList.add('d-none');
+            }
+        });
+        
+        // 离开按钮点击事件
+        btnLeave.addEventListener('click', () => {
+            window.location.href = "{{ url_for('chat.index') }}";
+        });
+        
+        // 页面关闭前断开连接
+        window.addEventListener('beforeunload', () => {
+            socket.disconnect();
+        });
+    });
+    
+    // 添加消息到聊天窗口
+    function addMessage(data) {
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message');
+        
+        // 判断是否是自己发送的消息
+        if (data.username === username) {
+            messageDiv.classList.add('message-own');
+        } else {
+            messageDiv.classList.add('message-other');
+        }
+        
+        // 格式化时间
+        const messageTime = new Date(data.time);
+        const formattedTime = messageTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        // 设置消息内容
+        messageDiv.innerHTML = `
+            ${data.username !== username ? `<div class="message-sender">${data.username}</div>` : ''}
+            <div class="message-content">${data.message}</div>
+            <div class="message-time">${formattedTime}</div>
+        `;
+        
+        // 添加到消息容器
+        messagesContainer.appendChild(messageDiv);
+        
+        // 滚动到底部
+        scrollToBottom();
+    }
+    
+    // 更新用户列表
+    function updateUserList(users) {
+        userList.innerHTML = '';
+        
+        users.forEach(user => {
+            const userDiv = document.createElement('div');
+            userDiv.classList.add('user-item');
+            
+            // 获取用户名首字母作为头像
+            const initial = user.username.charAt(0).toUpperCase();
+            
+            userDiv.innerHTML = `
+                <div class="user-avatar">${initial}</div>
+                <div class="user-name">${user.username}</div>
+                <div class="user-status status-online"></div>
+            `;
+            
+            userList.appendChild(userDiv);
+        });
+    }
+    
+    // 插入表情
+    function insertEmoji(emoji) {
+        messageInput.value += emoji;
+        messageInput.focus();
+        emojiPickerContainer.classList.add('d-none');
+    }
+    
+    // 滚动到底部
+    function scrollToBottom() {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+</script>
+{% endblock %}
