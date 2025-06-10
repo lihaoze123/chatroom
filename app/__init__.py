@@ -28,7 +28,20 @@ def create_app(config_class=None):
     db.init_app(app)
     login_manager.init_app(app)
 
-    # Import and register blueprints
+    # 配置 login_manager
+    login_manager.login_view = 'auth.login'
+    login_manager.login_message = '请先登录以访问此页面。'
+    
+    # 添加用户加载器回调函数
+    @login_manager.user_loader
+    def load_user(user_id):
+        from app.models import User
+        return User.query.get(int(user_id))
+    
+    # 注册蓝图
+    from app.main import bp as main_bp
+    app.register_blueprint(main_bp)
+
     from app.auth import bp as auth_bp
     app.register_blueprint(auth_bp, url_prefix='/auth')
 
