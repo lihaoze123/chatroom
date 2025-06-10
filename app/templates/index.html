@@ -3,30 +3,43 @@
 {% block title %}首页 - 聊天室{% endblock %}
 
 {% block content %}
+<div class="jumbotron p-5 mb-4">
+    <div class="container-fluid py-5">
+        <h1 class="display-5 fw-bold">欢迎来到聊天室</h1>
+        <p class="col-md-8 fs-4">与朋友们实时聊天，分享你的想法和感受。</p>
+        {% if current_user.is_authenticated %}
+            <a class="btn btn-primary btn-lg" href="{{ url_for('chat.room') }}" role="button">进入聊天室</a>
+        {% else %}
+            <a class="btn btn-primary btn-lg" href="{{ url_for('auth.register') }}" role="button">立即注册</a>
+            <a class="btn btn-outline-light btn-lg ms-2" href="{{ url_for('auth.login') }}" role="button">登录</a>
+        {% endif %}
+    </div>
+</div>
+
 <div class="row">
-    <div class="col-12">
-        <div class="jumbotron bg-light p-5 rounded">
-            <h1 class="display-4">欢迎来到聊天室！</h1>
-            {% if current_user.is_authenticated %}
-                <p class="lead">你好，{{ current_user.username }}！欢迎回来。</p>
-                <a class="btn btn-primary btn-lg" href="{{ url_for('chat.index') }}" role="button">进入聊天室</a>
-            {% else %}
-                <p class="lead">请先登录或注册以开始聊天。</p>
-                <a class="btn btn-primary btn-lg me-2" href="{{ url_for('auth.login') }}" role="button">登录</a>
-                <a class="btn btn-outline-primary btn-lg" href="{{ url_for('auth.register') }}" role="button">注册</a>
-            {% endif %}
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">实时聊天</h5>
+                <p class="card-text">与其他用户进行实时对话，体验流畅的聊天体验。</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">用户友好</h5>
+                <p class="card-text">简洁直观的界面设计，让聊天变得更加轻松愉快。</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">安全可靠</h5>
+                <p class="card-text">采用现代化的安全技术，保护您的隐私和数据安全。</p>
+            </div>
         </div>
     </div>
 </div>
 {% endblock %}
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-    <h1>Hello, {{ person }}!</h1>
-</body>
-</html>
