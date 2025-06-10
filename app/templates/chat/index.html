@@ -7,16 +7,26 @@
     .room-card {
         transition: all 0.3s ease;
         cursor: pointer;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        height: 100%;
     }
     
     .room-card:hover {
         transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
     }
     
     .room-icon {
         font-size: 2.5rem;
         margin-bottom: 1rem;
         color: #667eea;
+        transition: all 0.3s ease;
+    }
+    
+    .room-card:hover .room-icon {
+        transform: scale(1.1);
     }
     
     .create-room-card {
@@ -33,6 +43,62 @@
         position: absolute;
         top: 10px;
         right: 10px;
+        border-radius: 20px;
+        padding: 5px 10px;
+        font-size: 0.7rem;
+        font-weight: bold;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    
+    .card-title {
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+    }
+    
+    .card-text {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .form-floating > label {
+        padding: 1rem 0.75rem;
+    }
+    
+    .form-floating > .form-control {
+        padding: 1rem 0.75rem;
+        height: calc(3.5rem + 2px);
+    }
+    
+    .form-floating > .form-control:focus ~ label,
+    .form-floating > .form-control:not(:placeholder-shown) ~ label {
+        opacity: 0.65;
+        transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem);
+    }
+    
+    .is-invalid ~ .invalid-feedback {
+        display: block;
+    }
+    
+    .modal-content {
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+    
+    .modal-header {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    .modal-footer {
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    @keyframes roomCardAnimation {
+        0% { opacity: 0; transform: translateY(20px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+    
+    .room-card {
+        animation: roomCardAnimation 0.5s ease forwards;
     }
 </style>
 {% endblock %}
@@ -102,41 +168,42 @@
 
 <!-- 创建聊天室模态框 -->
 <div class="modal fade" id="createRoomModal" tabindex="-1" aria-labelledby="createRoomModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="createRoomModalLabel">创建新聊天室</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="createRoomForm" action="{{ url_for('chat.create_room') }}" method="POST">
-                    <div class="mb-3">
-                        <label for="roomName" class="form-label">聊天室名称</label>
-                        <input type="text" class="form-control" id="roomName" name="roomName" placeholder="输入聊天室名称" required>
+                <form id="createRoomForm" action="{{ url_for('chat.create_room') }}" method="POST" novalidate>
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="roomName" name="roomName" placeholder="输入聊天室名称" required pattern="^[a-zA-Z0-9_]+$">
+                        <label for="roomName">聊天室名称</label>
+                        <div class="invalid-feedback">请输入有效的聊天室名称（仅限英文字母、数字和下划线）</div>
                         <div class="form-text">聊天室名称将用作URL的一部分，请使用英文字母、数字和下划线</div>
                     </div>
-                    <div class="mb-3">
-                        <label for="roomDescription" class="form-label">聊天室描述</label>
-                        <textarea class="form-control" id="roomDescription" name="roomDescription" rows="3" placeholder="简单描述一下这个聊天室"></textarea>
+                    <div class="form-floating mb-3">
+                        <textarea class="form-control" id="roomDescription" name="roomDescription" style="height: 100px" placeholder="简单描述一下这个聊天室"></textarea>
+                        <label for="roomDescription">聊天室描述</label>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">聊天室类型</label>
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="roomType" id="publicRoom" value="public" checked>
                             <label class="form-check-label" for="publicRoom">
-                                公开 - 所有人可见
+                                <i class="bi bi-globe me-1"></i> 公开 - 所有人可见
                             </label>
                         </div>
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="roomType" id="privateRoom" value="private">
                             <label class="form-check-label" for="privateRoom">
-                                私密 - 仅邀请可见
+                                <i class="bi bi-lock me-1"></i> 私密 - 仅邀请可见
                             </label>
                         </div>
                     </div>
                     <div class="modal-footer px-0 pb-0">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                        <button type="submit" class="btn btn-primary">创建</button>
+                        <button type="submit" class="btn btn-primary">创建聊天室</button>
                     </div>
                 </form>
             </div>
@@ -148,18 +215,68 @@
 
 {% block scripts %}
 <script>
-    // 表单验证
     document.addEventListener('DOMContentLoaded', function() {
+        // 获取表单元素
         const createRoomForm = document.getElementById('createRoomForm');
+        
+        // 表单提交验证
         if (createRoomForm) {
             createRoomForm.addEventListener('submit', function(event) {
-                const roomName = document.getElementById('roomName').value.trim();
-                if (!roomName) {
+                let isValid = true;
+                
+                // 获取表单字段
+                const roomName = document.getElementById('roomName');
+                
+                // 验证聊天室名称
+                if (!roomName.value.trim()) {
+                    roomName.classList.add('is-invalid');
+                    isValid = false;
+                } else if (!roomName.value.match(/^[a-zA-Z0-9_]+$/)) {
+                    roomName.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    roomName.classList.remove('is-invalid');
+                    roomName.classList.add('is-valid');
+                }
+                
+                // 如果表单无效，阻止提交
+                if (!isValid) {
                     event.preventDefault();
-                    alert('请输入聊天室名称');
                 }
             });
+            
+            // 输入时验证
+            const roomName = document.getElementById('roomName');
+            roomName.addEventListener('input', function() {
+                if (!this.value.trim()) {
+                    this.classList.add('is-invalid');
+                    this.classList.remove('is-valid');
+                } else if (!this.value.match(/^[a-zA-Z0-9_]+$/)) {
+                    this.classList.add('is-invalid');
+                    this.classList.remove('is-valid');
+                } else {
+                    this.classList.remove('is-invalid');
+                    this.classList.add('is-valid');
+                }
+            });
+            
+            // 模态框显示时重置表单
+            const createRoomModal = document.getElementById('createRoomModal');
+            createRoomModal.addEventListener('show.bs.modal', function() {
+                createRoomForm.reset();
+                const inputs = createRoomForm.querySelectorAll('.form-control');
+                inputs.forEach(input => {
+                    input.classList.remove('is-invalid');
+                    input.classList.remove('is-valid');
+                });
+            });
         }
+        
+        // 聊天室卡片动画延迟
+        const roomCards = document.querySelectorAll('.room-card');
+        roomCards.forEach((card, index) => {
+            card.style.animationDelay = `${index * 0.1}s`;
+        });
     });
 </script>
 {% endblock %}
