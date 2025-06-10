@@ -32,9 +32,8 @@ def create_app(config=None):
     # 添加用户加载器回调函数
     @login_manager.user_loader
     def load_user(user_id):
-        # TODO: 当创建用户模型后，这里应该返回实际的用户对象
-        # 现在返回 None，表示没有登录用户
-        return None
+        from app.models import User
+        return User.query.get(int(user_id))
     
     # 注册蓝图
     from app.main import bp as main_bp
