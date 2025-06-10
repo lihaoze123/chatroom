@@ -6,22 +6,64 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_socketio import SocketIO
 from flask_cors import CORS
+import logging
+import os
+from logging.handlers import RotatingFileHandler
 
 # 初始化扩展
 db = SQLAlchemy()
 login_manager = LoginManager()
 socketio = SocketIO()
 
+def setup_logging(app):
+    """设置日志配置"""
+    if not app.debug and not app.testing:
+        # 确保日志目录存在
+        log_dir = os.path.dirname(app.config['LOG_FILE'])
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        
+        # 设置文件日志处理器
+        file_handler = RotatingFileHandler(
+            app.config['LOG_FILE'],
+            maxBytes=app.config['LOG_MAX_BYTES'],
+            backupCount=app.config['LOG_BACKUP_COUNT']
+        )
+        file_handler.setFormatter(logging.Formatter(
+            '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+        ))
+        file_handler.setLevel(getattr(logging, app.config['LOG_LEVEL']))
+        app.logger.addHandler(file_handler)
+    
+    # 设置控制台日志处理器
+    if not app.logger.handlers:
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(logging.Formatter(
+            '%(asctime)s %(levelname)s: %(message)s'
+        ))
+        console_handler.setLevel(getattr(logging, app.config['LOG_LEVEL']))
+        app.logger.addHandler(console_handler)
+    
+    app.logger.setLevel(getattr(logging, app.config['LOG_LEVEL']))
+    app.logger.info('应用启动完成')
+
 def create_app(config_class):
     """应用工厂函数"""
     app = Flask(__name__)
     app.config.from_object(config_class)
     
+    # 设置日志
+    setup_logging(app)
+    
     # 初始化扩展
     db.init_app(app)
     login_manager.init_app(app)
-    socketio.init_app(app, cors_allowed_origins=["http://localhost:3000"], async_mode='eventlet')
-    CORS(app, supports_credentials=True, origins=["http://localhost:3000"])
+    socketio.init_app(app, cors_allowed_origins=["*"], async_mode='eventlet')
+    CORS(app, 
+         supports_credentials=True, 
+         origins=["*"],
+         allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
     
     # 配置登录管理器
     login_manager.login_view = 'auth.login'
