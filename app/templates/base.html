@@ -20,6 +20,7 @@
                     {% if current_user.is_authenticated %}
                         <span class="navbar-text me-3">欢迎, {{ current_user.username }}!</span>
                         <a class="nav-link" href="{{ url_for('chat.room') }}">聊天室</a>
+                        <a class="nav-link" href="{{ url_for('auth.profile') }}">个人资料</a>
                         <a class="nav-link" href="{{ url_for('auth.logout') }}">登出</a>
                     {% else %}
                         <a class="nav-link" href="{{ url_for('auth.login') }}">登录</a>
@@ -54,4 +55,4 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     {% block scripts %}{% endblock %}
 </body>
-</html> 
+</html>
