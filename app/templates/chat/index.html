@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-2xl font-bold text-gray-800">聊天室列表</h1>
+        <a href="{{ url_for('chat.create_room') }}" class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+            创建聊天室
+        </a>
+    </div>
+
+    {% if rooms %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for room in rooms %}
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-800">{{ room.name }}</h2>
+                    <p class="text-gray-600 mt-1">{{ room.description }}</p>
+                </div>
+                <span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                    {{ room.users|length }} 位成员
+                </span>
+            </div>
+            
+            <div class="flex justify-between items-center">
+                <div class="text-sm text-gray-500">
+                    创建于 {{ room.created_at.strftime('%Y-%m-%d') }}
+                </div>
+                <div class="space-x-2">
+                    {% if current_user in room.users %}
+                    <a href="{{ url_for('chat.room', room_id=room.id) }}" class="inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors text-sm">
+                        进入聊天
+                    </a>
+                    <form action="{{ url_for('chat.leave_room', room_id=room.id) }}" method="post" class="inline-block">
+                        <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors text-sm">
+                            退出
+                        </button>
+                    </form>
+                    {% else %}
+                    <form action="{{ url_for('chat.join_room', room_id=room.id) }}" method="post" class="inline-block">
+                        <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors text-sm">
+                            加入
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-12">
+        <p class="text-gray-600 text-lg">目前还没有聊天室</p>
+        <p class="text-gray-500 mt-2">创建一个新的聊天室开始交谈吧！</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

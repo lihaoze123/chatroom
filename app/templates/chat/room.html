@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex flex-col lg:flex-row gap-4">
+        <!-- 聊天消息区域 -->
+        <div class="flex-grow bg-white rounded-lg shadow-lg p-4">
+            <div class="flex flex-col h-[600px]">
+                <!-- 消息历史记录 -->
+                <div id="message-container" class="flex-grow overflow-y-auto mb-4 space-y-4">
+                    {% for message in messages %}
+                    <div class="message {% if message.sender_id == current_user.id %}sent{% else %}received{% endif %}">
+                        <div class="flex items-start {% if message.sender_id == current_user.id %}justify-end{% endif %}">
+                            <div class="{% if message.sender_id == current_user.id %}bg-blue-500 text-white{% else %}bg-gray-100 text-gray-800{% endif %} rounded-lg px-4 py-2 max-w-[70%]">
+                                <div class="font-semibold text-sm">{{ message.sender.username }}</div>
+                                <div class="mt-1">{{ message.content }}</div>
+                                <div class="text-xs opacity-75 mt-1">{{ message.created_at.strftime('%H:%M') }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <!-- 输入区域 -->
+                <div class="border-t pt-4">
+                    <form id="message-form" class="flex gap-2">
+                        <input type="text" id="message-input" class="flex-grow rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:border-blue-500" placeholder="输入消息...">
+                        <button type="submit" class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                            发送
+                        </button>
+                    </form>
+                    <div id="typing-indicator" class="text-sm text-gray-500 mt-2 h-4"></div>
+                </div>
+            </div>
+        </div>
+        <!-- 在线用户列表 -->
+        <div class="w-full lg:w-64 bg-white rounded-lg shadow-lg p-4">
+            <h3 class="text-lg font-semibold mb-4">在线用户</h3>
+            <div id="online-users" class="space-y-2">
+                <!-- 在线用户将通过 JavaScript 动态添加 -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Socket.IO 客户端 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<script>
+    const socket = io();
+    const messageContainer = document.getElementById('message-container');
+    const messageForm = document.getElementById('message-form');
+    const messageInput = document.getElementById('message-input');
+    const typingIndicator = document.getElementById('typing-indicator');
+    const onlineUsers = document.getElementById('online-users');
+    const roomId = '{{ room.id }}';
+    let typingTimeout = null;
+
+    // 连接成功后加入房间
+    socket.on('connect', () => {
+        socket.emit('join_room', { room_id: roomId });
+    });
+
+    // 发送消息
+    messageForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const message = messageInput.value.trim();
+        if (message) {
+            socket.emit('send_message', {
+                room_id: roomId,
+                message: message
+            });
+            messageInput.value = '';
+        }
+    });
+
+    // 处理输入状态
+    messageInput.addEventListener('input', () => {
+        if (typingTimeout) clearTimeout(typingTimeout);
+        socket.emit('typing', { room_id: roomId, typing: true });
+        
+        typingTimeout = setTimeout(() => {
+            socket.emit('typing', { room_id: roomId, typing: false });
+        }, 2000);
+    });
+
+    // 接收新消息
+    socket.on('new_message', (data) => {
+        const messageDiv = document.createElement('div');
+        const isSent = data.sender_id === '{{ current_user.id }}';
+        messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
+        messageDiv.innerHTML = `
+            <div class="flex items-start ${isSent ? 'justify-end' : ''}">
+                <div class="${isSent ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-800'} rounded-lg px-4 py-2 max-w-[70%]">
+                    <div class="font-semibold text-sm">${data.sender_name}</div>
+                    <div class="mt-1">${data.content}</div>
+                    <div class="text-xs opacity-75 mt-1">${new Date(data.created_at).toLocaleTimeString()}</div>
+                </div>
+            </div>
+        `;
+        messageContainer.appendChild(messageDiv);
+        messageContainer.scrollTop = messageContainer.scrollHeight;
+    });
+
+    // 处理用户输入状态
+    socket.on('user_typing', (data) => {
+        if (data.user_id !== '{{ current_user.id }}') {
+            if (data.is_typing) {
+                typingIndicator.textContent = `${data.username} 正在输入...`;
+            } else {
+                typingIndicator.textContent = '';
+            }
+        }
+    });
+
+    // 更新在线用户列表
+    function updateOnlineUsers(users) {
+        onlineUsers.innerHTML = '';
+        Object.entries(users).forEach(([userId, user]) => {
+            if (user.rooms.includes(roomId)) {
+                const userDiv = document.createElement('div');
+                userDiv.className = 'flex items-center space-x-2';
+                userDiv.innerHTML = `
+                    <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span class="text-gray-800">${user.username}</span>
+                `;
+                onlineUsers.appendChild(userDiv);
+            }
+        });
+    }
+
+    // 处理用户连接/断开连接事件
+    socket.on('user_connected', (data) => {
+        console.log(`${data.username} 已连接`);
+    });
+
+    socket.on('user_disconnected', (data) => {
+        console.log(`${data.username} 已断开连接`);
+    });
+
+    socket.on('user_joined', (data) => {
+        console.log(`${data.username} 加入了房间`);
+    });
+
+    socket.on('user_left', (data) => {
+        console.log(`${data.username} 离开了房间`);
+    });
+
+    // 自动滚动到最新消息
+    messageContainer.scrollTop = messageContainer.scrollHeight;
+</script>
+{% endblock %}
