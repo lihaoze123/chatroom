@@ -117,9 +117,9 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room }) => {
       <Separator />
 
       {/* 主要内容区域 */}
-      <CardContent className="flex-1 flex p-0">
+      <CardContent className="flex-1 flex p-0 overflow-hidden">
         {/* 消息区域 */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <MessageList messages={messages} typingUsers={typingUsers} />
           <MessageInput
             onSendMessage={handleSendMessage}
@@ -132,7 +132,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room }) => {
         {showUserList && (
           <>
             <Separator orientation="vertical" />
-            <div className="w-64 bg-muted/30">
+            <div className="w-64 bg-muted/30 flex-shrink-0">
               <div className="p-4">
                 <h3 className="text-sm font-semibold mb-3">
                   在线用户 ({onlineUsers.length})

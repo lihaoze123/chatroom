@@ -74,4 +74,66 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+/* 确保 ScrollArea 组件的滚动条正常显示 */
+[data-radix-scroll-area-viewport] {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+
+/* 为 ScrollArea 添加更好的滚动条样式 */
+[data-radix-scroll-area-scrollbar] {
+  display: flex !important;
+  user-select: none;
+  touch-action: none;
+  padding: 2px;
+  background: transparent;
+  transition: background-color 150ms ease;
+}
+
+[data-radix-scroll-area-scrollbar]:hover {
+  background: hsl(var(--muted));
+}
+
+[data-radix-scroll-area-thumb] {
+  background: hsl(var(--border));
+  border-radius: 4px;
+  position: relative;
+  transition: background-color 150ms ease;
+}
+
+[data-radix-scroll-area-thumb]:hover {
+  background: hsl(var(--border) / 0.8);
+}
+
+/* 防止消息越界的额外样式 */
+.chat-container {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.message-bubble {
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  max-width: 100%;
+}
+
+/* 确保flex容器不会越界 */
+.flex-container-safe {
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* 消息列表容器样式 */
+.message-list-container {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 } 

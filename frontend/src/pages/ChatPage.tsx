@@ -43,7 +43,7 @@ const ChatPage: React.FC = () => {
   }
 
   return (
-    <div className="h-screen flex bg-background">
+    <div className="h-screen flex bg-background overflow-hidden">
       {/* 左侧边栏 - 聊天室列表 */}
       <div className="w-80 flex-shrink-0">
         <RoomList
@@ -53,7 +53,7 @@ const ChatPage: React.FC = () => {
       </div>
 
       {/* 主要内容区域 */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {selectedRoom ? (
           <ChatRoomComponent room={selectedRoom} />
         ) : (
