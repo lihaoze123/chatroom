@@ -1,145 +1,136 @@
+# app/__init__.py
+# Flask应用工厂
+
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_socketio import SocketIO
+from flask_cors import CORS
+import logging
 import os
+from logging.handlers import RotatingFileHandler
+import socket
 
 # 初始化扩展
 db = SQLAlchemy()
 login_manager = LoginManager()
-login_manager.login_view = 'auth.login'
 socketio = SocketIO()
 
-def create_app(config_class=None):
+def setup_logging(app):
+    """设置日志配置"""
+    if not app.debug and not app.testing:
+        # 确保日志目录存在
+        log_dir = os.path.dirname(app.config['LOG_FILE'])
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        
+        # 设置文件日志处理器
+        file_handler = RotatingFileHandler(
+            app.config['LOG_FILE'],
+            maxBytes=app.config['LOG_MAX_BYTES'],
+            backupCount=app.config['LOG_BACKUP_COUNT']
+        )
+        file_handler.setFormatter(logging.Formatter(
+            '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+        ))
+        file_handler.setLevel(getattr(logging, app.config['LOG_LEVEL']))
+        app.logger.addHandler(file_handler)
+    
+    # 设置控制台日志处理器
+    if not app.logger.handlers:
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(logging.Formatter(
+            '%(asctime)s %(levelname)s: %(message)s'
+        ))
+        console_handler.setLevel(getattr(logging, app.config['LOG_LEVEL']))
+        app.logger.addHandler(console_handler)
+    
+    app.logger.setLevel(getattr(logging, app.config['LOG_LEVEL']))
+    app.logger.info('应用启动完成')
+
+def create_app(config_class):
     """应用工厂函数"""
     app = Flask(__name__)
-    
-    # 配置应用
-    _configure_app(app, config_class)
-    
-    # 初始化扩展
-    _init_extensions(app)
+    app.config.from_object(config_class)
     
     # 设置日志
-    _setup_logging(app)
+    setup_logging(app)
     
-    # 注册蓝图
-    _register_blueprints(app)
-    
-    # 创建数据库表
-    _create_database_tables(app)
-    
-    # 注册错误处理器
-    _register_error_handlers(app)
-    
-    # 注册CLI命令
-    _register_cli_commands(app)
-    
-    return app
-
-def _configure_app(app, config_class):
-    """配置应用"""
-    if config_class:
-        app.config.from_object(config_class)
-    else:
-        # 加载默认配置
-        try:
-            from config import config
-            config_name = os.environ.get('FLASK_ENV', 'development')
-            config_class = config.get(config_name, config['default'])
-            app.config.from_object(config_class)
-            
-            # 调用配置类的初始化方法
-            config_class.init_app(app)
-        except ImportError:
-            # 如果没有配置文件，使用默认配置
-            app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or 'dev-secret-key'
-            app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or \
-                'sqlite:///' + os.path.join(app.root_path, '..', 'instance', 'app.db')
-            app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    
-    # 确保实例文件夹存在
-    instance_path = os.path.join(app.root_path, '..', 'instance')
-    os.makedirs(instance_path, exist_ok=True)
-
-def _init_extensions(app):
-    """初始化Flask扩展"""
-    # 初始化数据库
+    # 初始化扩展
     db.init_app(app)
-    
-    # 初始化登录管理器
     login_manager.init_app(app)
-    socketio.init_app(app, cors_allowed_origins='*')
-
-    # 配置 login_manager
-    login_manager.login_view = 'auth.login'
+    
+    # 动态CORS配置 - 支持局域网访问
+    cors_origins = [
+        "http://localhost:3000", 
+        "http://127.0.0.1:3000", 
+        "http://0.0.0.0:3000",
+        "http://10.121.11.229:3000",  # 当前检测到的IP
+        "http://10.121.18.103:3000",  # 另一个设备的IP
+    ]
+    
+    # 如果是开发环境，允许局域网访问
+    if app.config.get('ENV') == 'development' or app.config.get('DEBUG'):
+        # 获取本机IP地址并添加到允许列表
+        try:
+            hostname = socket.gethostname()
+            local_ip = socket.gethostbyname(hostname)
+            local_origin = f"http://{local_ip}:3000"
+            if local_origin not in cors_origins:
+                cors_origins.append(local_origin)
+                app.logger.info(f"添加本机IP到CORS允许列表: {local_origin}")
+        except Exception as e:
+            app.logger.warning(f"无法获取本机IP: {e}")
+        
+        # 对于开发环境，添加通配符（Socket.IO支持"*"字符串）
+        cors_origins.append("*")
+    
+    app.logger.info(f"CORS允许的来源: {cors_origins}")
+    
+    # 初始化Socket.IO
+    socketio.init_app(app, 
+                     cors_allowed_origins=cors_origins,
+                     logger=True,
+                     engineio_logger=True,
+                     ping_timeout=60,
+                     ping_interval=25)
+    
+    # Flask CORS配置（用于HTTP API）
+    flask_cors_origins = [
+        "http://localhost:3000", 
+        "http://127.0.0.1:3000", 
+        "http://0.0.0.0:3000",
+        "http://10.121.11.229:3000",
+        "http://10.121.18.103:3000",
+        "*"  # Flask CORS可以使用通配符
+    ]
+    
+    CORS(app, 
+         supports_credentials=True, 
+         origins=flask_cors_origins,
+         allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+    
+    # 配置登录管理器
+    login_manager.login_view = None  # 禁用自动重定向，因为这是API应用
     login_manager.login_message = '请先登录以访问此页面。'
     login_manager.login_message_category = 'info'
     
-    # 设置用户加载器
-    @login_manager.user_loader
-    def load_user(user_id):
-        # 延迟导入避免循环导入
-        from app.models import User
-        try:
-            return User.query.get(int(user_id))
-        except (ValueError, TypeError):
-            return None
-
-def _register_blueprints(app):
-    """注册应用蓝图"""
-    try:
-        # 注册主页蓝图
-        from app.main import bp as main_bp
-        app.register_blueprint(main_bp)
-    except ImportError:
-        app.logger.warning("主页蓝图导入失败")
+    # 自定义未授权处理函数
+    @login_manager.unauthorized_handler
+    def unauthorized():
+        from flask import jsonify
+        return jsonify({'error': '未授权访问，请先登录'}), 401
     
     # 注册蓝图
-    from app.main import bp as main_bp
-    app.register_blueprint(main_bp)
-
-    from app.auth import bp as auth_bp
-    app.register_blueprint(auth_bp, url_prefix='/auth')
-
-    from app.chat import bp as chat_bp
-    app.register_blueprint(chat_bp, url_prefix='/chat')
-
-    # 注册 Socket.IO 事件处理程序
-    from app.chat import events
-
-def _create_database_tables(app):
-    """创建数据库表"""
+    from app.api import bp as api_bp
+    app.register_blueprint(api_bp, url_prefix='/api')
+    
+    # 创建数据库表
     with app.app_context():
-        try:
-            # 导入所有模型以确保它们被注册
-            from app import models
-            db.create_all()
-            app.logger.info("数据库表创建成功")
-        except Exception as e:
-            app.logger.error(f"数据库表创建失败: {e}")
+        db.create_all()
+    
+    return app
 
-def _register_error_handlers(app):
-    """注册错误处理器"""
-    from flask import jsonify, render_template, request
-    
-    @app.errorhandler(404)
-    def not_found_error(error):
-        if request.path.startswith('/api/'):
-            return jsonify({'error': '资源未找到'}), 404
-        return render_template('errors/404.html'), 404
-    
-    @app.errorhandler(500)
-    def internal_error(error):
-        db.session.rollback()
-        if request.path.startswith('/api/'):
-            return jsonify({'error': '服务器内部错误'}), 500
-        return render_template('errors/500.html'), 500
-    
-    @app.errorhandler(403)
-    def forbidden_error(error):
-        if request.path.startswith('/api/'):
-            return jsonify({'error': '访问被禁止'}), 403
-        return render_template('errors/403.html'), 403
-
-from app import models
+# 导入模型以确保它们被注册
+from app import models 

@@ -4,7 +4,7 @@
 
 import os
 import sys
-from app import create_app
+from app import create_app, socketio
 from config import config
 
 def main():
@@ -18,7 +18,7 @@ def main():
         app = create_app(config_class)
         
         # 获取运行参数
-        host = os.environ.get('FLASK_HOST', '127.0.0.1')
+        host = os.environ.get('FLASK_HOST', '0.0.0.0')
         port = int(os.environ.get('FLASK_PORT', 5000))
         debug = config_name == 'development'
         
@@ -27,8 +27,8 @@ def main():
         print(f"地址: http://{host}:{port}")
         print(f"调试模式: {'开启' if debug else '关闭'}")
         
-        # 启动应用
-        app.run(host=host, port=port, debug=debug)
+        # 使用Socket.IO运行应用
+        socketio.run(app, host=host, port=port, debug=debug)
         
     except KeyboardInterrupt:
         print("\n应用已停止")
