@@ -58,10 +58,10 @@ def create_app(config_class):
     # 初始化扩展
     db.init_app(app)
     login_manager.init_app(app)
-    socketio.init_app(app, cors_allowed_origins="*", async_mode='eventlet')
+    socketio.init_app(app, cors_allowed_origins=["http://localhost:3000", "http://127.0.0.1:3000"], async_mode='eventlet')
     CORS(app, 
          supports_credentials=True, 
-         origins="*",
+         origins=["http://localhost:3000", "http://127.0.0.1:3000"],
          allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
     
@@ -71,15 +71,6 @@ def create_app(config_class):
     login_manager.login_message_category = 'info'
     
     # 注册蓝图
-    from app.main import bp as main_bp
-    app.register_blueprint(main_bp)
-    
-    from app.auth import bp as auth_bp
-    app.register_blueprint(auth_bp, url_prefix='/auth')
-    
-    from app.chat import bp as chat_bp
-    app.register_blueprint(chat_bp, url_prefix='/chat')
-    
     from app.api import bp as api_bp
     app.register_blueprint(api_bp, url_prefix='/api')
     
