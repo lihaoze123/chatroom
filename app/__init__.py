@@ -65,8 +65,6 @@ def create_app(config_class):
         "http://localhost:3000", 
         "http://127.0.0.1:3000", 
         "http://0.0.0.0:3000",
-        "http://10.121.11.229:3000",  # 当前检测到的IP
-        "http://10.121.18.103:3000",  # 另一个设备的IP
     ]
     
     # 如果是开发环境，允许局域网访问
@@ -82,32 +80,15 @@ def create_app(config_class):
         except Exception as e:
             app.logger.warning(f"无法获取本机IP: {e}")
         
-        # 对于开发环境，添加通配符（Socket.IO支持"*"字符串）
+        # 对于开发环境，添加通配符
         cors_origins.append("*")
     
     app.logger.info(f"CORS允许的来源: {cors_origins}")
     
-    # 初始化Socket.IO
-    socketio.init_app(app, 
-                     cors_allowed_origins=cors_origins,
-                     logger=True,
-                     engineio_logger=True,
-                     ping_timeout=60,
-                     ping_interval=25)
-    
-    # Flask CORS配置（用于HTTP API）
-    flask_cors_origins = [
-        "http://localhost:3000", 
-        "http://127.0.0.1:3000", 
-        "http://0.0.0.0:3000",
-        "http://10.121.11.229:3000",
-        "http://10.121.18.103:3000",
-        "*"  # Flask CORS可以使用通配符
-    ]
-    
+    # Flask CORS配置（用于HTTP API）- 移到这里，在蓝图注册之前
     CORS(app, 
          supports_credentials=True, 
-         origins=flask_cors_origins,
+         origins=cors_origins,  # 使用统一的origins列表
          allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
     
@@ -126,6 +107,13 @@ def create_app(config_class):
     from app.api import bp as api_bp
     app.register_blueprint(api_bp, url_prefix='/api')
     
+    socketio.init_app(app, 
+                     cors_allowed_origins=cors_origins,
+                     logger=True,
+                     engineio_logger=True,
+                     ping_timeout=60,
+                     ping_interval=25)
+    
     # 创建数据库表
     with app.app_context():
         db.create_all()
@@ -136,4 +124,4 @@ def create_app(config_class):
 from app import models
 
 # 导入socket事件处理器
-from app import socket_events 
+from app import socket_events
