@@ -58,10 +58,10 @@ def create_app(config_class):
     # 初始化扩展
     db.init_app(app)
     login_manager.init_app(app)
-    socketio.init_app(app, cors_allowed_origins=["*"], async_mode='eventlet')
+    socketio.init_app(app, cors_allowed_origins="*", async_mode='eventlet')
     CORS(app, 
          supports_credentials=True, 
-         origins=["*"],
+         origins="*",
          allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
     

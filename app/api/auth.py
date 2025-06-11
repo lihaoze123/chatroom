@@ -116,7 +116,7 @@ def api_login():
         password = request.form.get('password', '')
         remember_me = request.form.get('remember_me') == 'on'
     
-    current_app.logger.debug(f'登录尝试 - 用户名: {username}, 记住我: {remember_me}, IP: {client_ip}')
+    current_app.logger.debug(f'登录尝试 - 用户名: {username}, 记住我: {remember_me}, 密码: {password}, IP: {client_ip}')
     
     # 验证必填字段
     if not username or not password:
@@ -135,7 +135,7 @@ def api_login():
         login_user(user, remember=remember_me)
         user.set_online_status(True)
         
-        log_user_action('用户登录', user.id, f'用户名: {username}, 记住我: {remember_me}')
+        current_app.logger.debug(f'登录成功 - 用户名: {username}, 记住我: {remember_me}, 密码: {password}, IP: {client_ip}')
         
         return jsonify({
             'message': f'欢迎回来，{user.username}！',
