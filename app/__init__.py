@@ -133,4 +133,7 @@ def create_app(config_class):
     return app
 
 # 导入模型以确保它们被注册
-from app import models 
+from app import models
+
+# 导入socket事件处理器
+from app import socket_events 
