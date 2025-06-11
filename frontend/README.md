@@ -68,10 +68,20 @@ REACT_APP_SOCKET_URL=http://localhost:5000
 ### 启动开发服务器
 
 ```bash
+# 本地访问
 npm start
+
+# 局域网访问（允许其他设备访问）
+npm run start:network
 ```
 
 应用将在 `http://localhost:3000` 启动。
+
+**局域网访问说明：**
+- 使用 `npm run start:network` 启动后，局域网内的其他设备可以通过服务器IP访问
+- 例如：`http://192.168.1.100:3000`（替换为实际IP地址）
+- 前端会自动检测并使用正确的API服务器地址
+- 详细配置请参考 [NETWORK_ACCESS.md](../NETWORK_ACCESS.md)
 
 ### 构建生产版本
 

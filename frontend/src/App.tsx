@@ -12,7 +12,7 @@ function App() {
   return (
     <AuthProvider>
       <ChatProvider>
-        <Router>
+        <Router future={{ v7_startTransition: true }}>
           <div className="App">
             <Routes>
               {/* 公开路由 */}

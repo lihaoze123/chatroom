@@ -1,7 +1,28 @@
 import axios from 'axios';
 import { LoginData, RegisterData, User, ChatRoom, Message } from '../types';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+// 动态获取API基础URL的函数
+const getApiBaseUrl = (): string => {
+  // 优先使用环境变量
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
+  
+  // 如果没有设置环境变量，则根据当前页面的host动态构建
+  const { protocol, hostname } = window.location;
+  
+  // 如果是localhost或127.0.0.1，保持原样
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:5000';
+  }
+  
+  // 否则使用当前页面的hostname，端口5000
+  return `${protocol}//${hostname}:5000`;
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
+console.log('API Base URL:', API_BASE_URL);
 
 const api = axios.create({
   baseURL: API_BASE_URL,

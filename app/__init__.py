@@ -9,6 +9,7 @@ from flask_cors import CORS
 import logging
 import os
 from logging.handlers import RotatingFileHandler
+import socket
 
 # 初始化扩展
 db = SQLAlchemy()
@@ -58,10 +59,55 @@ def create_app(config_class):
     # 初始化扩展
     db.init_app(app)
     login_manager.init_app(app)
-    socketio.init_app(app, cors_allowed_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://0.0.0.0:3000"], async_mode='eventlet')
+    
+    # 动态CORS配置 - 支持局域网访问
+    cors_origins = [
+        "http://localhost:3000", 
+        "http://127.0.0.1:3000", 
+        "http://0.0.0.0:3000",
+        "http://10.121.11.229:3000",  # 当前检测到的IP
+        "http://10.121.18.103:3000",  # 另一个设备的IP
+    ]
+    
+    # 如果是开发环境，允许局域网访问
+    if app.config.get('ENV') == 'development' or app.config.get('DEBUG'):
+        # 获取本机IP地址并添加到允许列表
+        try:
+            hostname = socket.gethostname()
+            local_ip = socket.gethostbyname(hostname)
+            local_origin = f"http://{local_ip}:3000"
+            if local_origin not in cors_origins:
+                cors_origins.append(local_origin)
+                app.logger.info(f"添加本机IP到CORS允许列表: {local_origin}")
+        except Exception as e:
+            app.logger.warning(f"无法获取本机IP: {e}")
+        
+        # 对于开发环境，添加通配符（Socket.IO支持"*"字符串）
+        cors_origins.append("*")
+    
+    app.logger.info(f"CORS允许的来源: {cors_origins}")
+    
+    # 初始化Socket.IO
+    socketio.init_app(app, 
+                     cors_allowed_origins=cors_origins,
+                     logger=True,
+                     engineio_logger=True,
+                     ping_timeout=60,
+                     ping_interval=25)
+    
+    # Flask CORS配置（用于HTTP API）
+    flask_cors_origins = [
+        "http://localhost:3000", 
+        "http://127.0.0.1:3000", 
+        "http://0.0.0.0:3000",
+        "http://10.121.11.229:3000",
+        "http://10.121.18.103:3000",
+        "*"  # Flask CORS可以使用通配符
+    ]
+    
     CORS(app, 
          supports_credentials=True, 
-         origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://0.0.0.0:3000"],
+         origins=flask_cors_origins,
          allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
     
