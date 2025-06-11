@@ -78,14 +78,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (data: LoginData): Promise<boolean> => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
-      await authAPI.login(data);
+      const response = await authAPI.login(data);
       
-      // 登录成功后获取用户信息
-      const user = await authAPI.getCurrentUser();
-      dispatch({ type: 'SET_USER', payload: user });
-      
-      toast.success('登录成功！');
-      return true;
+      // 登录接口返回用户信息，直接使用，避免额外的 API 调用
+      if (response && response.user) {
+        dispatch({ type: 'SET_USER', payload: response.user });
+        toast.success('登录成功！');
+        return true;
+      } else {
+        // 如果登录接口没有返回用户信息（不太可能），则调用 getCurrentUser
+        console.warn('登录接口未返回用户信息，正在获取用户信息...');
+        const user = await authAPI.getCurrentUser();
+        dispatch({ type: 'SET_USER', payload: user });
+        toast.success('登录成功！');
+        return true;
+      }
     } catch (error: any) {
       console.error('Login error:', error);
       toast.error(error.response?.data?.message || '登录失败，请检查用户名和密码');
