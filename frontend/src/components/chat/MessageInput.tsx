@@ -101,14 +101,14 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, di
           </button>
           
           {/* 表情面板 */}
-          <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-            <div className="grid grid-cols-5 gap-1">
+          <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 min-w-[240px]">
+            <div className="grid grid-cols-5 gap-3">
               {emojis.map((emoji, index) => (
                 <button
                   key={index}
                   type="button"
                   onClick={() => setMessage(prev => prev + emoji)}
-                  className="p-1 hover:bg-gray-100 rounded text-lg"
+                  className="p-1.5 hover:bg-gray-100 rounded text-xl"
                 >
                   {emoji}
                 </button>
@@ -151,4 +151,4 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, di
   );
 };
 
-export default MessageInput; 
+export default MessageInput;
