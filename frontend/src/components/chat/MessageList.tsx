@@ -1,10 +1,12 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Message } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { ScrollArea } from '../ui/scroll-area';
 import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Button } from '../ui/button';
+import { ChevronDown } from 'lucide-react';
 
 interface MessageListProps {
   messages: Message[];
@@ -14,23 +16,89 @@ interface MessageListProps {
 const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
   const { user } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const previousLengthRef = useRef(0);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // 防御性检查：确保 messages 是数组
   const safeMessages = Array.isArray(messages) ? messages : [];
   const safeTypingUsers = Array.isArray(typingUsers) ? typingUsers : [];
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+    setUnreadCount(0);
+  }, []);
 
+  const checkScrollPosition = useCallback(() => {
+    const scrollArea = scrollAreaRef.current;
+    if (scrollArea) {
+      const viewport = scrollArea.querySelector('[data-radix-scroll-area-viewport]');
+      if (viewport) {
+        const { scrollTop, scrollHeight, clientHeight } = viewport;
+        const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+        setShowScrollButton(!isNearBottom);
+        
+        if (isNearBottom) {
+          setUnreadCount(0);
+        }
+      }
+    }
+  }, []);
+
+  // 监听滚动事件
   useEffect(() => {
-    scrollToBottom();
-  }, [safeMessages]);
+    const scrollArea = scrollAreaRef.current;
+    if (scrollArea) {
+      const viewport = scrollArea.querySelector('[data-radix-scroll-area-viewport]');
+      if (viewport) {
+        viewport.addEventListener('scroll', checkScrollPosition);
+        return () => viewport.removeEventListener('scroll', checkScrollPosition);
+      }
+    }
+  }, [checkScrollPosition]);
+
+  // 当有新消息时，如果用户不在底部，增加未读计数
+  useEffect(() => {
+    if (safeMessages.length > previousLengthRef.current) {
+      const newMessages = safeMessages.slice(previousLengthRef.current);
+      const hasOwnMessage = newMessages.some(msg => msg.user_id === user?.id);
+      
+      if (hasOwnMessage) {
+        // 如果是用户自己发送的消息，自动滚动到底部
+        setTimeout(() => {
+          scrollToBottom();
+        }, 100);
+      } else if (showScrollButton) {
+        // 如果是其他人的消息且用户不在底部，增加未读计数
+        const newMessagesCount = newMessages.length;
+        setUnreadCount(prev => prev + newMessagesCount);
+      }
+    }
+    
+    previousLengthRef.current = safeMessages.length;
+  }, [safeMessages.length, showScrollButton, user?.id, scrollToBottom]);
+
+  // 初始加载时滚动到底部
+  useEffect(() => {
+    if (safeMessages.length > 0) {
+      // 延迟一点时间确保DOM已经渲染
+      const timer = setTimeout(() => {
+        scrollToBottom();
+        checkScrollPosition();
+      }, 150);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [safeMessages.length === 0 ? 0 : 1, scrollToBottom, checkScrollPosition]); // 只在首次加载消息时触发
 
   const formatTime = (dateString: string) => {
     try {
+      // 创建Date对象，如果是UTC时间，需要转换为北京时间(UTC+8)
       const date = new Date(dateString);
-      return formatDistanceToNow(date, { addSuffix: true, locale: zhCN });
+      // 如果时间字符串不包含时区信息，假设它是UTC时间，转换为北京时间
+      const beijingTime = new Date(date.getTime() + (8 * 60 * 60 * 1000));
+      return formatDistanceToNow(beijingTime, { addSuffix: true, locale: zhCN });
     } catch (error) {
       return '刚刚';
     }
@@ -51,8 +119,8 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 message-list-container">
-      <ScrollArea className="flex-1 p-4">
+    <div className="flex-1 flex flex-col min-h-0 message-list-container relative">
+      <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
         {safeMessages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-muted-foreground">
             <div className="text-center">
@@ -115,10 +183,16 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
                         
                         {/* 消息时间 */}
                         <div className={`text-xs text-muted-foreground mt-1 ${isOwnMessage ? 'text-right' : 'text-left'}`}>
-                          {new Date(message.timestamp).toLocaleTimeString('zh-CN', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                          {(() => {
+                            // 转换为北京时间显示
+                            const date = new Date(message.timestamp);
+                            const beijingTime = new Date(date.getTime() + (8 * 60 * 60 * 1000));
+                            return beijingTime.toLocaleTimeString('zh-CN', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              timeZone: 'Asia/Shanghai'
+                            });
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -162,6 +236,27 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
           </div>
         )}
       </ScrollArea>
+
+      {/* 滚动到底部按钮 */}
+      {showScrollButton && (
+        <div className="scroll-to-bottom-btn">
+          <Button
+            onClick={scrollToBottom}
+            size="sm"
+            className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground border-0"
+            title="滚动到底部"
+          >
+            <ChevronDown className="h-4 w-4" />
+            {unreadCount > 0 ? (
+              <span className="ml-1 unread-count">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            ) : (
+              <span className="ml-1 text-xs">底部</span>
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
