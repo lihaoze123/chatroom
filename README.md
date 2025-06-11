@@ -37,9 +37,11 @@
   * **Eventlet** - 异步服务器
 
 ### 前端
-  * **React 18** - 用户界面库
+  * **React 19.1.0** - 用户界面库
   * **TypeScript** - 类型安全的JavaScript
-  * **TailwindCSS** - 实用优先的CSS框架
+  * **TailwindCSS 3.4.17** - 实用优先的CSS框架
+  * **shadcn/ui** - 现代化UI组件库
+  * **Radix UI** - 无障碍访问的原始组件
   * **Socket.IO Client** - 实时通信
   * **Axios** - HTTP客户端
   * **React Router** - 路由管理
@@ -103,6 +105,9 @@ python init_db.py
 ```bash
 cd frontend
 npm install
+
+# 构建 shadcn/ui 样式
+npm run build-css-once
 ```
 
 ### 4\. 启动应用
@@ -297,6 +302,7 @@ ipconfig
 - 清除浏览器缓存
 - 检查TailwindCSS配置是否正确
 - 确认所有前端依赖已正确安装
+- 验证 shadcn/ui 组件是否正确导入
 
 #### 5. 数据库相关错误
 
