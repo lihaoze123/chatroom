@@ -12,6 +12,13 @@ from app.models import Room, Message, RoomMembership, User
 @login_required
 def api_get_rooms():
     """获取房间列表API"""
+    from app.utils import get_client_ip
+    from flask import current_app
+    from flask_login import current_user
+    
+    client_ip = get_client_ip()
+    current_app.logger.debug(f'获取房间列表请求 - 用户ID: {current_user.id}, 用户名: {current_user.username}, IP: {client_ip}')
+    
     try:
         # 获取用户加入的房间
         user_rooms = Room.query.join(RoomMembership).filter(
@@ -21,12 +28,15 @@ def api_get_rooms():
         # 获取公共房间
         public_rooms = Room.query.filter_by(is_private=False).all()
         
+        current_app.logger.debug(f'房间列表获取成功 - 用户房间数: {len(user_rooms)}, 公共房间数: {len(public_rooms)}, 用户ID: {current_user.id}')
+        
         return jsonify({
             'user_rooms': [room.to_dict() for room in user_rooms],
             'public_rooms': [room.to_dict() for room in public_rooms]
         }), 200
         
     except Exception as e:
+        current_app.logger.error(f'获取房间列表失败 - 用户ID: {current_user.id}, IP: {client_ip}, 错误: {str(e)}')
         return jsonify({'error': '获取房间列表失败'}), 500
 
 @bp.route('/rooms', methods=['POST'])

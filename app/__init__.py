@@ -58,17 +58,23 @@ def create_app(config_class):
     # 初始化扩展
     db.init_app(app)
     login_manager.init_app(app)
-    socketio.init_app(app, cors_allowed_origins=["http://localhost:3000", "http://127.0.0.1:3000"], async_mode='eventlet')
+    socketio.init_app(app, cors_allowed_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://0.0.0.0:3000"], async_mode='eventlet')
     CORS(app, 
          supports_credentials=True, 
-         origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+         origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://0.0.0.0:3000"],
          allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
     
     # 配置登录管理器
-    login_manager.login_view = 'auth.login'
+    login_manager.login_view = None  # 禁用自动重定向，因为这是API应用
     login_manager.login_message = '请先登录以访问此页面。'
     login_manager.login_message_category = 'info'
+    
+    # 自定义未授权处理函数
+    @login_manager.unauthorized_handler
+    def unauthorized():
+        from flask import jsonify
+        return jsonify({'error': '未授权访问，请先登录'}), 401
     
     # 注册蓝图
     from app.api import bp as api_bp

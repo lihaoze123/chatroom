@@ -135,12 +135,19 @@ def api_login():
         login_user(user, remember=remember_me)
         user.set_online_status(True)
         
-        current_app.logger.debug(f'登录成功 - 用户名: {username}, 记住我: {remember_me}, 密码: {password}, IP: {client_ip}')
+        # 添加会话调试信息
+        from flask import session
+        current_app.logger.debug(f'登录成功 - 用户名: {username}, 记住我: {remember_me}, Session ID: {session.get("_id", "无")}, 用户ID: {session.get("_user_id", "无")}, IP: {client_ip}')
         
-        return jsonify({
+        response = jsonify({
             'message': f'欢迎回来，{user.username}！',
             'user': user.to_dict()
-        }), 200
+        })
+        
+        # 调试响应头中的Cookie设置
+        current_app.logger.debug(f'登录响应Cookie设置: {response.headers.get("Set-Cookie", "无Cookie设置")}')
+        
+        return response, 200
         
     except Exception as e:
         current_app.logger.error(f'登录失败：系统错误 - 用户名: {username}, IP: {client_ip}, 错误: {str(e)}')
@@ -300,6 +307,12 @@ def api_change_password():
 def api_check_auth():
     """检查认证状态API"""
     client_ip = get_client_ip()
+    
+    # 添加更详细的会话调试信息
+    from flask import session, request
+    cookies = dict(request.cookies)
+    current_app.logger.debug(f'会话调试 - Session ID: {session.get("_id", "无")}, 用户ID: {session.get("_user_id", "无")}, IP: {client_ip}')
+    current_app.logger.debug(f'Cookie调试 - 收到的Cookies: {cookies}')
     
     if current_user.is_authenticated:
         current_app.logger.debug(f'认证状态检查：已认证 - 用户ID: {current_user.id}, IP: {client_ip}')

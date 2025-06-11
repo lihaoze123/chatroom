@@ -18,7 +18,7 @@ def main():
         app = create_app(config_class)
         
         # 获取运行参数
-        host = os.environ.get('FLASK_HOST', '0.0.0.0')
+        host = os.environ.get('FLASK_HOST', 'localhost')
         port = int(os.environ.get('FLASK_PORT', 5000))
         debug = config_name == 'development'
         

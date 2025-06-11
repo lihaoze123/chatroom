@@ -9,6 +9,13 @@ class Config:
                               'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance', 'app.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
+    # 会话配置
+    SESSION_COOKIE_SECURE = False  # 开发环境设为False，生产环境应设为True
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'  # 允许跨站请求携带Cookie
+    SESSION_COOKIE_DOMAIN = None  # 允许所有域名，开发环境使用
+    PERMANENT_SESSION_LIFETIME = 86400  # 24小时
+    
     # 日志配置
     LOG_LEVEL = os.environ.get('LOG_LEVEL') or 'INFO'
     LOG_FILE = os.environ.get('LOG_FILE') or os.path.join(os.path.abspath(os.path.dirname(__file__)), 'logs', 'app.log')
