@@ -166,7 +166,7 @@ const ChatRoomComponent: React.FC<{ room: ChatRoomType }> = ({ room }) => {
         // 离开当前房间
         await leaveRoom(currentRoom.id);
       }
-
+      
       if (!currentRoom || currentRoom.id !== room.id) {
         // 加入新房间
         setLoading(true);
@@ -179,13 +179,6 @@ const ChatRoomComponent: React.FC<{ room: ChatRoomType }> = ({ room }) => {
     };
 
     handleRoomChange();
-
-    // 组件卸载时离开房间
-    return () => {
-      if (currentRoom) {
-        leaveRoom(currentRoom.id);
-      }
-    };
   }, [room.id, currentRoom?.id, joinRoom, leaveRoom]);
 
   if (loading) {

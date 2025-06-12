@@ -16,13 +16,55 @@ const RegisterForm: React.FC = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showPassword2, setShowPassword2] = useState(false);
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [touched, setTouched] = useState<{[key: string]: boolean}>({});
   const { register, loading } = useAuth();
   const navigate = useNavigate();
+
+  // 验证单个字段
+  const validateField = (name: string, value: string): string => {
+    switch (name) {
+      case 'username':
+        if (!value.trim()) return '请输入用户名';
+        if (value.length < 2) return '用户名至少需要2个字符';
+        if (value.length > 20) return '用户名不能超过20个字符';
+        if (!/^[\u4e00-\u9fa5a-zA-Z0-9_]+$/.test(value)) {
+          return '用户名只能包含中文、英文字母、数字和下划线';
+        }
+        return '';
+      case 'email':
+        if (!value.trim()) return '请输入邮箱地址';
+        if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value)) {
+          return '请输入有效的邮箱地址';
+        }
+        return '';
+      case 'password':
+        if (!value) return '请输入密码';
+        if (value.length < 6) return '密码长度至少6个字符';
+        return '';
+      case 'password2':
+        if (!value) return '请确认密码';
+        if (value !== formData.password) return '两次输入的密码不一致';
+        return '';
+      default:
+        return '';
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (formData.password !== formData.password2) {
+    // 验证所有字段
+    const newErrors: {[key: string]: string} = {};
+    Object.keys(formData).forEach(key => {
+      const error = validateField(key, formData[key as keyof RegisterData]);
+      if (error) newErrors[key] = error;
+    });
+    
+    setErrors(newErrors);
+    setTouched({ username: true, email: true, password: true, password2: true });
+    
+    if (Object.keys(newErrors).length > 0) {
       return;
     }
     
@@ -38,10 +80,26 @@ const RegisterForm: React.FC = () => {
       ...prev,
       [name]: value,
     }));
+    
+    // 实时验证
+    if (touched[name]) {
+      const error = validateField(name, value);
+      setErrors(prev => ({
+        ...prev,
+        [name]: error
+      }));
+    }
   };
 
-  const passwordsMatch = formData.password === formData.password2;
-  const showPasswordError = formData.password2 && !passwordsMatch;
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setTouched(prev => ({ ...prev, [name]: true }));
+    const error = validateField(name, value);
+    setErrors(prev => ({
+      ...prev,
+      [name]: error
+    }));
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-6 px-4 sm:py-12 sm:px-6 lg:px-8">
@@ -80,10 +138,18 @@ const RegisterForm: React.FC = () => {
                     required
                     value={formData.username}
                     onChange={handleChange}
-                    className="pl-10 h-11 sm:h-12"
+                    onBlur={handleBlur}
+                    className={`pl-10 h-11 sm:h-12 ${
+                      errors.username && touched.username
+                        ? 'border-destructive focus-visible:ring-destructive'
+                        : ''
+                    }`}
                     placeholder="用户名"
                   />
                 </div>
+                {errors.username && touched.username && (
+                  <p className="mt-1 text-sm text-destructive">{errors.username}</p>
+                )}
               </div>
 
               <div>
@@ -101,10 +167,18 @@ const RegisterForm: React.FC = () => {
                     required
                     value={formData.email}
                     onChange={handleChange}
-                    className="pl-10 h-11 sm:h-12"
+                    onBlur={handleBlur}
+                    className={`pl-10 h-11 sm:h-12 ${
+                      errors.email && touched.email
+                        ? 'border-destructive focus-visible:ring-destructive'
+                        : ''
+                    }`}
                     placeholder="邮箱地址"
                   />
                 </div>
+                {errors.email && touched.email && (
+                  <p className="mt-1 text-sm text-destructive">{errors.email}</p>
+                )}
               </div>
 
               <div>
@@ -122,8 +196,13 @@ const RegisterForm: React.FC = () => {
                     required
                     value={formData.password}
                     onChange={handleChange}
-                    className="pl-10 pr-10 h-11 sm:h-12"
-                    placeholder="密码"
+                    onBlur={handleBlur}
+                    className={`pl-10 pr-10 h-11 sm:h-12 ${
+                      errors.password && touched.password
+                        ? 'border-destructive focus-visible:ring-destructive'
+                        : ''
+                    }`}
+                    placeholder="密码（至少6个字符）"
                   />
                   <button
                     type="button"
@@ -137,6 +216,9 @@ const RegisterForm: React.FC = () => {
                     )}
                   </button>
                 </div>
+                {errors.password && touched.password && (
+                  <p className="mt-1 text-sm text-destructive">{errors.password}</p>
+                )}
               </div>
 
               <div>
@@ -154,8 +236,9 @@ const RegisterForm: React.FC = () => {
                     required
                     value={formData.password2}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     className={`pl-10 pr-10 h-11 sm:h-12 ${
-                      showPasswordError
+                      errors.password2 && touched.password2
                         ? 'border-destructive focus-visible:ring-destructive'
                         : ''
                     }`}
@@ -173,15 +256,15 @@ const RegisterForm: React.FC = () => {
                     )}
                   </button>
                 </div>
-                {showPasswordError && (
-                  <p className="mt-1 text-sm text-destructive">密码不匹配</p>
+                {errors.password2 && touched.password2 && (
+                  <p className="mt-1 text-sm text-destructive">{errors.password2}</p>
                 )}
               </div>
             </div>
 
             <Button
               type="submit"
-              disabled={loading || !!showPasswordError}
+              disabled={loading || Object.values(errors).some(error => error !== '')}
               className="w-full h-11 sm:h-12"
               size="lg"
             >
@@ -202,7 +285,7 @@ const RegisterForm: React.FC = () => {
               注册即表示您同意我们的{' '}
               <button
                 type="button"
-                className="text-primary hover:text-primary/80 transition-colors"
+                className="text-primary hover:text-primary/80 transition-colors underline"
                 onClick={() => {/* TODO: 显示服务条款 */}}
               >
                 服务条款
@@ -210,7 +293,7 @@ const RegisterForm: React.FC = () => {
               {' '}和{' '}
               <button
                 type="button"
-                className="text-primary hover:text-primary/80 transition-colors"
+                className="text-primary hover:text-primary/80 transition-colors underline"
                 onClick={() => {/* TODO: 显示隐私政策 */}}
               >
                 隐私政策
@@ -223,4 +306,4 @@ const RegisterForm: React.FC = () => {
   );
 };
 
-export default RegisterForm; 
+export default RegisterForm;

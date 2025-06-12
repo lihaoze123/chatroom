@@ -110,7 +110,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return true;
     } catch (error: any) {
       console.error('Register error:', error);
-      toast.error(error.response?.data?.message || '注册失败，请重试');
+      const errorData = error.response?.data;
+      let errorMessage = '注册失败，请重试';
+      
+      if (errorData?.error) {
+        errorMessage = errorData.error;
+      } else if (errorData?.message) {
+        errorMessage = errorData.message;
+      }
+      
+      toast.error(errorMessage);
       dispatch({ type: 'SET_LOADING', payload: false });
       return false;
     }
@@ -149,4 +158,4 @@ export const useAuth = (): AuthContextType => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}; 
+};
