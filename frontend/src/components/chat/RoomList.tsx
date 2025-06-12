@@ -64,7 +64,7 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
 
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 px-4 lg:px-6">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">聊天室</CardTitle>
           <Button
@@ -72,6 +72,7 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
             size="icon"
             onClick={() => setShowCreateModal(true)}
             title="创建聊天室"
+            className="h-8 w-8 lg:h-10 lg:w-10"
           >
             <Plus className="h-4 w-4" />
           </Button>
@@ -84,7 +85,7 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
             placeholder="搜索聊天室..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-10 h-9 lg:h-10"
           />
         </div>
       </CardHeader>
@@ -95,27 +96,29 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
         <ScrollArea className="h-full">
           {filteredRooms.length === 0 ? (
             <div className="p-4 text-center text-muted-foreground">
-              {searchTerm ? '没有找到匹配的聊天室' : '暂无聊天室'}
+              <div className="py-8">
+                {searchTerm ? '没有找到匹配的聊天室' : '暂无聊天室'}
+              </div>
             </div>
           ) : (
-            <div className="space-y-1 p-2">
+            <div className="space-y-1 p-2 lg:p-3">
               {filteredRooms.map((room) => (
                 <Button
                   key={room.id}
                   variant={selectedRoomId === room.id ? "secondary" : "ghost"}
-                  className="w-full justify-start h-auto p-3"
+                  className="w-full justify-start h-auto p-3 lg:p-4"
                   onClick={() => onRoomSelect(room)}
                 >
-                  <div className="flex items-center space-x-3 w-full">
+                  <div className="flex items-center space-x-3 w-full min-w-0">
                     <div className="flex-shrink-0">
                       <Hash className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <div className="flex-1 min-w-0 text-left">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium truncate">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-medium truncate flex-1">
                           {room.name}
                         </p>
-                        <div className="flex items-center text-xs text-muted-foreground">
+                        <div className="flex items-center text-xs text-muted-foreground flex-shrink-0">
                           <Users className="h-3 w-3 mr-1" />
                           {room.member_count || 0}
                         </div>
@@ -165,8 +168,8 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ onClose, onCreate }) 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <Card className="w-full max-w-md mx-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>创建聊天室</CardTitle>
         </CardHeader>
@@ -184,6 +187,7 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ onClose, onCreate }) 
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="输入聊天室名称"
+                className="h-10"
               />
             </div>
 
@@ -196,23 +200,25 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ onClose, onCreate }) 
                 rows={3}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                 placeholder="输入聊天室描述"
               />
             </div>
 
-            <div className="flex justify-end space-x-2 pt-4">
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={onClose}
                 disabled={loading}
+                className="flex-1 order-2 sm:order-1"
               >
                 取消
               </Button>
               <Button
                 type="submit"
                 disabled={loading || !name.trim()}
+                className="flex-1 order-1 sm:order-2"
               >
                 {loading ? (
                   <div className="flex items-center">
@@ -220,7 +226,7 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ onClose, onCreate }) 
                     创建中...
                   </div>
                 ) : (
-                  '创建'
+                  '创建聊天室'
                 )}
               </Button>
             </div>

@@ -121,16 +121,16 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 message-list-container relative">
-      <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
+      <ScrollArea ref={scrollAreaRef} className="flex-1 p-3 sm:p-4">
         {safeMessages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-muted-foreground">
-            <div className="text-center">
-              <div className="text-4xl mb-2">💬</div>
-              <p>还没有消息，开始聊天吧！</p>
+            <div className="text-center px-4">
+              <div className="text-3xl sm:text-4xl mb-2">💬</div>
+              <p className="text-sm sm:text-base">还没有消息，开始聊天吧！</p>
             </div>
           </div>
         ) : (
-          <div className="space-y-4 chat-container">
+          <div className="space-y-3 sm:space-y-4 chat-container">
             {safeMessages.map((message, index) => {
               const isOwnMessage = message.user_id === user?.id;
               const showAvatar = index === 0 || safeMessages[index - 1].user_id !== message.user_id;
@@ -140,20 +140,20 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
               return (
                 <div key={message.id} className="animate-fade-in w-full">
                   {showTime && (
-                    <div className="flex justify-center mb-4">
-                      <span className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">
+                    <div className="flex justify-center mb-3 sm:mb-4">
+                      <span className="text-xs text-muted-foreground bg-muted px-2 sm:px-3 py-1 rounded-full">
                         {formatTime(message.timestamp)}
                       </span>
                     </div>
                   )}
                   
                   <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-2 w-full`}>
-                    <div className={`flex max-w-[65%] flex-container-safe ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <div className={`flex max-w-[85%] sm:max-w-[75%] md:max-w-[65%] flex-container-safe ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
                       {/* 头像 */}
                       {showAvatar && !isOwnMessage && (
-                        <div className="flex-shrink-0 mr-3">
-                          <Avatar className="w-8 h-8">
-                            <AvatarFallback className={`text-white text-sm font-medium ${getAvatarColor(message.user_id)}`}>
+                        <div className="flex-shrink-0 mr-2 sm:mr-3">
+                          <Avatar className="w-7 h-7 sm:w-8 sm:h-8">
+                            <AvatarFallback className={`text-white text-xs sm:text-sm font-medium ${getAvatarColor(message.user_id)}`}>
                               {message.username.charAt(0).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
@@ -161,7 +161,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
                       )}
                       
                       {/* 消息内容 */}
-                      <div className={`min-w-0 flex-1 ${isOwnMessage ? 'mr-3' : showAvatar ? '' : 'ml-11'}`}>
+                      <div className={`min-w-0 flex-1 ${isOwnMessage ? 'mr-2 sm:mr-3' : showAvatar ? '' : 'ml-9 sm:ml-11'}`}>
                         {/* 发送者名称 */}
                         {showAvatar && !isOwnMessage && (
                           <div className="text-xs text-muted-foreground mb-1 truncate flex items-center">
@@ -174,7 +174,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
                         
                         {/* 消息气泡 */}
                         <div
-                          className={`px-4 py-2 rounded-2xl message-bubble ${
+                          className={`px-3 sm:px-4 py-2 rounded-2xl message-bubble ${
                             isOwnMessage
                               ? 'bg-primary text-primary-foreground rounded-br-md'
                               : 'bg-muted text-foreground rounded-bl-md'
@@ -208,9 +208,9 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
             {/* 正在输入指示器 */}
             {safeTypingUsers.length > 0 && (
               <div className="flex justify-start mb-2 w-full">
-                <div className="flex max-w-[65%] flex-container-safe">
-                  <div className="flex-shrink-0 mr-3">
-                    <Avatar className="w-8 h-8">
+                <div className="flex max-w-[85%] sm:max-w-[75%] md:max-w-[65%] flex-container-safe">
+                  <div className="flex-shrink-0 mr-2 sm:mr-3">
+                    <Avatar className="w-7 h-7 sm:w-8 sm:h-8">
                       <AvatarFallback className="bg-muted">
                         <div className="flex space-x-1">
                           <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce"></div>
@@ -224,7 +224,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
                     <div className="text-xs text-muted-foreground mb-1">
                       {safeTypingUsers.join(', ')} 正在输入...
                     </div>
-                    <div className="px-4 py-2 bg-muted rounded-2xl rounded-bl-md message-bubble">
+                    <div className="px-3 sm:px-4 py-2 bg-muted rounded-2xl rounded-bl-md message-bubble">
                       <div className="flex space-x-1">
                         <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
                         <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
@@ -247,16 +247,16 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
           <Button
             onClick={scrollToBottom}
             size="sm"
-            className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground border-0"
+            className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground border-0 h-10 w-auto px-3"
             title="滚动到底部"
           >
             <ChevronDown className="h-4 w-4" />
             {unreadCount > 0 ? (
-              <span className="ml-1 unread-count">
+              <span className="ml-1 unread-count text-xs">
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             ) : (
-              <span className="ml-1 text-xs">底部</span>
+              <span className="ml-1 text-xs hidden sm:inline">底部</span>
             )}
           </Button>
         </div>
