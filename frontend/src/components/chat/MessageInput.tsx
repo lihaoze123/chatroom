@@ -119,10 +119,14 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, di
             type="button"
             variant="ghost"
             size="icon"
+            variant="ghost"
+            size="icon"
             title="表情"
             onClick={() => setShowEmojiPanel(!showEmojiPanel)}
             className="h-10 w-10 sm:h-11 sm:w-11 flex-shrink-0"
           >
+            <Smile className="h-4 w-4" />
+          </Button>
             <Smile className="h-4 w-4" />
           </Button>
           
@@ -164,12 +168,16 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, di
 
         {/* 发送按钮 */}
         <Button
+        <Button
           type="submit"
           disabled={!message.trim() || disabled}
+          size="icon"
           size="icon"
           title="发送消息"
           className="h-10 w-10 sm:h-11 sm:w-11 flex-shrink-0"
         >
+          <Send className="h-4 w-4" />
+        </Button>
           <Send className="h-4 w-4" />
         </Button>
       </form>

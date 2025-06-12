@@ -6,6 +6,9 @@ import { Eye, EyeOff, UserPlus, User, Mail, Lock } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Input } from '../ui/input';
+import { Button } from '../ui/button';
 
 const RegisterForm: React.FC = () => {
   const [formData, setFormData] = useState<RegisterData>({
@@ -56,9 +59,12 @@ const RegisterForm: React.FC = () => {
             <Link
               to="/login"
               className="font-medium text-primary hover:text-primary/80 transition-colors"
+              className="font-medium text-primary hover:text-primary/80 transition-colors"
             >
               立即登录
             </Link>
+          </CardDescription>
+        </CardHeader>
           </CardDescription>
         </CardHeader>
 
@@ -180,6 +186,7 @@ const RegisterForm: React.FC = () => {
             </div>
 
             <Button
+            <Button
               type="submit"
               disabled={loading || !!showPasswordError}
               className="w-full h-11 sm:h-12"
@@ -187,6 +194,7 @@ const RegisterForm: React.FC = () => {
             >
               {loading ? (
                 <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div>
                   注册中...
                 </div>
@@ -196,6 +204,7 @@ const RegisterForm: React.FC = () => {
                   注册
                 </div>
               )}
+            </Button>
             </Button>
 
             <div className="text-center text-xs text-muted-foreground mt-4">

@@ -69,6 +69,14 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room }) => {
           </div>
         </CardContent>
       </Card>
+      <Card className="h-full">
+        <CardContent className="h-full flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">加载中...</p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -130,6 +138,17 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room }) => {
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
+            {/* 退出登录 */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLogout}
+              title="退出登录"
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
 
@@ -174,6 +193,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room }) => {
       {/* 主要内容区域 */}
       <CardContent className="flex-1 flex p-0 overflow-hidden relative">
         {/* 消息区域 */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <MessageList messages={messages} typingUsers={typingUsers} />
           <MessageInput
@@ -257,6 +277,8 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room }) => {
             </div>
           </div>
         )}
+      </CardContent>
+    </Card>
       </CardContent>
     </Card>
   );

@@ -6,6 +6,9 @@ import { Eye, EyeOff, LogIn, User, Lock } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Input } from '../ui/input';
+import { Button } from '../ui/button';
 
 const LoginForm: React.FC = () => {
   const [formData, setFormData] = useState<LoginData>({
@@ -45,6 +48,7 @@ const LoginForm: React.FC = () => {
             还没有账户？{' '}
             <Link
               to="/register"
+              className="font-medium text-primary hover:text-primary/80 transition-colors"
               className="font-medium text-primary hover:text-primary/80 transition-colors"
             >
               立即注册
@@ -134,7 +138,18 @@ const LoginForm: React.FC = () => {
                 </button>
               </div>
             </div>
+              <div className="text-sm">
+                <button
+                  type="button"
+                  className="font-medium text-primary hover:text-primary/80 transition-colors"
+                  onClick={() => {/* TODO: 实现忘记密码功能 */}}
+                >
+                  忘记密码？
+                </button>
+              </div>
+            </div>
 
+            <Button
             <Button
               type="submit"
               disabled={loading}
@@ -144,6 +159,7 @@ const LoginForm: React.FC = () => {
               {loading ? (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div>
                   登录中...
                 </div>
               ) : (
@@ -152,6 +168,10 @@ const LoginForm: React.FC = () => {
                   登录
                 </div>
               )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
             </Button>
           </form>
         </CardContent>

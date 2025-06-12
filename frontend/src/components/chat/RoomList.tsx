@@ -9,6 +9,11 @@ import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Input } from '../ui/input';
+import { Button } from '../ui/button';
+import { ScrollArea } from '../ui/scroll-area';
+import { Separator } from '../ui/separator';
 
 interface RoomListProps {
   onRoomSelect: (room: ChatRoom) => void;
@@ -59,6 +64,11 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </CardContent>
       </Card>
+      <Card className="h-full">
+        <CardContent className="h-full flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -76,9 +86,14 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
           >
             <Plus className="h-4 w-4" />
           </Button>
+            <Plus className="h-4 w-4" />
+          </Button>
         </div>
         
+        
         <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="text"
@@ -88,6 +103,9 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
             className="pl-10 h-9 lg:h-10"
           />
         </div>
+      </CardHeader>
+
+      <Separator />
       </CardHeader>
 
       <Separator />
@@ -144,6 +162,7 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
           onCreate={handleCreateRoom}
         />
       )}
+    </Card>
     </Card>
   );
 };

@@ -1,8 +1,13 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Message } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import { ScrollArea } from '../ui/scroll-area';
+import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Button } from '../ui/button';
+import { ChevronDown } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Button } from '../ui/button';
@@ -20,16 +25,73 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
   const previousLengthRef = useRef(0);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const previousLengthRef = useRef(0);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // 防御性检查：确保 messages 是数组
   const safeMessages = Array.isArray(messages) ? messages : [];
   const safeTypingUsers = Array.isArray(typingUsers) ? typingUsers : [];
 
   const scrollToBottom = useCallback(() => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     setUnreadCount(0);
   }, []);
+    setUnreadCount(0);
+  }, []);
 
+  const checkScrollPosition = useCallback(() => {
+    const scrollArea = scrollAreaRef.current;
+    if (scrollArea) {
+      const viewport = scrollArea.querySelector('[data-radix-scroll-area-viewport]');
+      if (viewport) {
+        const { scrollTop, scrollHeight, clientHeight } = viewport;
+        const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+        setShowScrollButton(!isNearBottom);
+        
+        if (isNearBottom) {
+          setUnreadCount(0);
+        }
+      }
+    }
+  }, []);
+
+  // 监听滚动事件
+  useEffect(() => {
+    const scrollArea = scrollAreaRef.current;
+    if (scrollArea) {
+      const viewport = scrollArea.querySelector('[data-radix-scroll-area-viewport]');
+      if (viewport) {
+        viewport.addEventListener('scroll', checkScrollPosition);
+        return () => viewport.removeEventListener('scroll', checkScrollPosition);
+      }
+    }
+  }, [checkScrollPosition]);
+
+  // 当有新消息时，如果用户不在底部，增加未读计数
+  useEffect(() => {
+    if (safeMessages.length > previousLengthRef.current) {
+      const newMessages = safeMessages.slice(previousLengthRef.current);
+      const hasOwnMessage = newMessages.some(msg => msg.user_id === user?.id);
+      
+      if (hasOwnMessage) {
+        // 如果是用户自己发送的消息，自动滚动到底部
+        setTimeout(() => {
+          scrollToBottom();
+        }, 100);
+      } else if (showScrollButton) {
+        // 如果是其他人的消息且用户不在底部，增加未读计数
+        const newMessagesCount = newMessages.length;
+        setUnreadCount(prev => prev + newMessagesCount);
+      }
+    }
+    
+    previousLengthRef.current = safeMessages.length;
+  }, [safeMessages.length, showScrollButton, user?.id, scrollToBottom]);
+
+  // 初始加载时滚动到底部
   const checkScrollPosition = useCallback(() => {
     const scrollArea = scrollAreaRef.current;
     if (scrollArea) {
@@ -91,11 +153,25 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
       return () => clearTimeout(timer);
     }
   }, [safeMessages.length === 0 ? 0 : 1, scrollToBottom, checkScrollPosition]); // 只在首次加载消息时触发
+    if (safeMessages.length > 0) {
+      // 延迟一点时间确保DOM已经渲染
+      const timer = setTimeout(() => {
+        scrollToBottom();
+        checkScrollPosition();
+      }, 150);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [safeMessages.length === 0 ? 0 : 1, scrollToBottom, checkScrollPosition]); // 只在首次加载消息时触发
 
   const formatTime = (dateString: string) => {
     try {
       // 创建Date对象，如果是UTC时间，需要转换为北京时间(UTC+8)
+      // 创建Date对象，如果是UTC时间，需要转换为北京时间(UTC+8)
       const date = new Date(dateString);
+      // 如果时间字符串不包含时区信息，假设它是UTC时间，转换为北京时间
+      const beijingTime = new Date(date.getTime() + (8 * 60 * 60 * 1000));
+      return formatDistanceToNow(beijingTime, { addSuffix: true, locale: zhCN });
       // 如果时间字符串不包含时区信息，假设它是UTC时间，转换为北京时间
       const beijingTime = new Date(date.getTime() + (8 * 60 * 60 * 1000));
       return formatDistanceToNow(beijingTime, { addSuffix: true, locale: zhCN });

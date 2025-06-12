@@ -46,6 +46,13 @@ const ChatPage: React.FC = () => {
             <p className="text-muted-foreground">正在验证身份...</p>
           </CardContent>
         </Card>
+      <div className="h-screen flex items-center justify-center bg-background">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center p-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+            <p className="text-muted-foreground">正在验证身份...</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -190,6 +197,14 @@ const ChatRoomComponent: React.FC<{ room: ChatRoomType }> = ({ room }) => {
 
   if (loading) {
     return (
+      <Card className="h-full">
+        <CardContent className="h-full flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">正在加入聊天室...</p>
+          </div>
+        </CardContent>
+      </Card>
       <Card className="h-full">
         <CardContent className="h-full flex items-center justify-center">
           <div className="text-center">
