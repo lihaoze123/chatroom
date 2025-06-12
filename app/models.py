@@ -71,6 +71,19 @@ class Room(db.Model):
     memberships = db.relationship('RoomMembership', backref='room', lazy='dynamic', cascade='all, delete-orphan')
     creator = db.relationship('User', backref='created_rooms')
     
+    
+    #新加
+    def set_password(self, raw_password):
+        """设置聊天室密码（仅私密房间用）"""
+        self.password_hash = generate_password_hash(raw_password)
+
+    def check_password(self, raw_password):
+        """检查聊天室密码是否正确"""
+        if not self.password_hash:
+            return False
+        return check_password_hash(self.password_hash, raw_password)
+    
+    
     def get_members(self):
         """获取房间成员"""
         return User.query.join(RoomMembership).filter(RoomMembership.room_id == self.id).all()

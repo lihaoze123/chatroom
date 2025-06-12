@@ -51,6 +51,8 @@ def api_create_room():
     name = data.get('name', '').strip()
     description = data.get('description', '').strip()
     is_private = data.get('is_private', False)
+    #新加
+    password = data.get('password', '').strip()
     
     # 验证房间名称
     if not name:
@@ -59,6 +61,11 @@ def api_create_room():
     if len(name) < 2 or len(name) > 50:
         return jsonify({'error': '房间名称长度必须在2-50个字符之间'}), 400
     
+    #新加
+    if is_private and not password:
+        return jsonify({'error': '私密房间必须设置密码'}), 400
+
+
     # 检查房间名是否已存在
     if Room.query.filter_by(name=name).first():
         return jsonify({'error': '房间名称已存在，请选择其他名称'}), 409
@@ -71,6 +78,11 @@ def api_create_room():
             is_private=is_private,
             created_by=current_user.id
         )
+
+        #新加
+        if is_private:
+            room.set_password(password)
+
         db.session.add(room)
         db.session.commit()
         
@@ -120,25 +132,29 @@ def api_get_room(room_id):
 @bp.route('/rooms/<int:room_id>/join', methods=['POST'])
 @login_required
 def api_join_room(room_id):
-    """加入房间API"""
+    """加入房间API（支持私密房间密码验证）"""
     room = Room.query.get_or_404(room_id)
-    
-    if room.is_private:
-        return jsonify({'error': '无法加入私有房间'}), 403
     
     try:
         if room.is_member(current_user):
             return jsonify({'message': '您已经是该房间的成员'}), 200
-        
+
+        if room.is_private:
+            data = request.get_json()
+            password = data.get('password', '').strip() if data else ''
+            if not room.check_password(password):
+                return jsonify({'error': '密码错误，无法加入私密房间'}), 403
+
         room.add_member(current_user)
-        
+
         return jsonify({
             'message': f'成功加入聊天室 "{room.name}"',
             'room': room.to_dict()
         }), 200
-        
+
     except Exception as e:
         return jsonify({'error': '加入房间失败'}), 500
+
 
 @bp.route('/rooms/<int:room_id>/leave', methods=['POST'])
 @login_required

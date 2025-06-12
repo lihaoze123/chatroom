@@ -133,15 +133,27 @@ export const chatAPI = {
     return response.data.room;
   },
 
-  createRoom: async (name: string, description?: string): Promise<ChatRoom> => {
-    const response = await api.post('/api/rooms', { name, description });
+  createRoom: async (
+    name: string,
+    description?: string,
+    is_private: boolean = false,
+    password?: string
+  ): Promise<ChatRoom> => {
+    const response = await api.post('/api/rooms', {
+      name,
+      description,
+      is_private,
+      password
+    });
     return response.data.room;
   },
+  
 
-  joinRoom: async (roomId: number) => {
-    const response = await api.post(`/api/rooms/${roomId}/join`);
+  joinRoom: async (roomId: number, password?: string) => {
+    const response = await api.post(`/api/rooms/${roomId}/join`, { password });
     return response.data;
   },
+  
 
   leaveRoom: async (roomId: number) => {
     const response = await api.post(`/api/rooms/${roomId}/leave`);
