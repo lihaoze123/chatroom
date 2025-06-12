@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Smile } from 'lucide-react';
+import { Button } from '../ui/button';
+import { Separator } from '../ui/separator';
 
 interface MessageInputProps {
   onSendMessage: (message: string) => void;
@@ -88,30 +90,33 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, di
   const emojis = ['😀', '😂', '😍', '🤔', '👍', '👎', '❤️', '🎉', '😢', '😡'];
 
   return (
-    <div className="border-t border-gray-200 bg-white p-4">
+    <div className="border-t bg-background p-4">
       <form onSubmit={handleSubmit} className="flex items-end space-x-3">
         {/* 表情按钮 */}
         <div className="relative group">
-          <button
+          <Button
             type="button"
-            className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+            variant="ghost"
+            size="icon"
             title="表情"
           >
-            <Smile className="h-5 w-5" />
-          </button>
+            <Smile className="h-4 w-4" />
+          </Button>
           
           {/* 表情面板 */}
-          <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 min-w-[240px]">
+          <div className="absolute bottom-full left-0 mb-2 bg-popover border rounded-lg shadow-lg p-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 min-w-[240px]">
             <div className="grid grid-cols-5 gap-3">
               {emojis.map((emoji, index) => (
-                <button
+                <Button
                   key={index}
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setMessage(prev => prev + emoji)}
-                  className="p-1.5 hover:bg-gray-100 rounded text-xl"
+                  className="p-1.5 text-xl h-auto"
                 >
                   {emoji}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -126,25 +131,25 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, di
             onKeyDown={handleKeyDown}
             placeholder="输入消息... (Enter发送，Shift+Enter换行)"
             disabled={disabled}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-3 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 resize-none disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-muted-foreground"
             rows={1}
             style={{ minHeight: '48px', maxHeight: '120px' }}
           />
         </div>
 
         {/* 发送按钮 */}
-        <button
+        <Button
           type="submit"
           disabled={!message.trim() || disabled}
-          className="p-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          size="icon"
           title="发送消息"
         >
-          <Send className="h-5 w-5" />
-        </button>
+          <Send className="h-4 w-4" />
+        </Button>
       </form>
 
       {/* 输入提示 */}
-      <div className="mt-2 text-xs text-gray-500">
+      <div className="mt-2 text-xs text-muted-foreground">
         按 Enter 发送，Shift + Enter 换行
       </div>
     </div>
