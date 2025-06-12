@@ -73,9 +73,9 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room }) => {
   }
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="h-full flex flex-col overflow-hidden">
       {/* 聊天室头部 - 桌面端显示 */}
-      <CardHeader className="pb-3 hidden lg:block">
+      <CardHeader className="pb-3 hidden lg:block flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 min-w-0 flex-1">
             <div className="flex items-center space-x-2 min-w-0">
@@ -134,7 +134,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room }) => {
       </CardHeader>
 
       {/* 移动端简化头部 */}
-      <CardHeader className="pb-3 lg:hidden">
+      <CardHeader className="pb-3 lg:hidden flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 min-w-0 flex-1">
             <div className={`w-2 h-2 rounded-full flex-shrink-0 ${connected ? 'bg-green-500' : 'bg-red-500'}`}></div>
@@ -169,12 +169,12 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room }) => {
         </div>
       </CardHeader>
 
-      <Separator />
+      <Separator className="flex-shrink-0" />
 
       {/* 主要内容区域 */}
-      <CardContent className="flex-1 p-0 flex relative">
+      <CardContent className="flex-1 p-0 flex relative overflow-hidden min-h-0">
         {/* 消息区域 */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
           <MessageList 
             messages={messages} 
             typingUsers={typingUsers}
@@ -196,8 +196,8 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room }) => {
             />
             
             {/* 用户列表 */}
-            <div className="fixed right-0 top-0 bottom-0 w-64 bg-background border-l z-50 lg:relative lg:w-56 lg:z-auto">
-              <div className="flex items-center justify-between p-4 border-b lg:hidden">
+            <div className="fixed right-0 top-0 bottom-0 w-64 bg-background border-l z-50 lg:relative lg:w-56 lg:z-auto flex flex-col overflow-hidden">
+              <div className="flex items-center justify-between p-4 border-b lg:hidden flex-shrink-0">
                 <h3 className="font-semibold">在线用户</h3>
                 <Button
                   variant="ghost"
@@ -208,11 +208,11 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room }) => {
                 </Button>
               </div>
               
-              <div className="hidden lg:block p-4 border-b">
+              <div className="hidden lg:block p-4 border-b flex-shrink-0">
                 <h3 className="font-semibold text-sm">在线用户 ({onlineUsers.length})</h3>
               </div>
 
-              <ScrollArea className="flex-1">
+              <ScrollArea className="flex-1 min-h-0">
                 <div className="p-2 space-y-1">
                   {onlineUsers.map((username, index) => (
                     <div

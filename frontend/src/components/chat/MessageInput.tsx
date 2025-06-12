@@ -111,7 +111,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, di
   const emojis = ['😀', '😂', '😍', '🤔', '👍', '👎', '❤️', '🎉', '😢', '😡', '🔥', '💯', '🎯', '⚡', '🌟', '💪'];
 
   return (
-    <div className="border-t bg-background p-3 sm:p-4 message-input-container mobile-safe-area">
+    <div className="border-t bg-background p-3 sm:p-4 message-input-container mobile-safe-area flex-shrink-0">
       <form onSubmit={handleSubmit} className="flex items-end space-x-2 sm:space-x-3">
         {/* 表情按钮 */}
         <div className="relative emoji-panel-container">
