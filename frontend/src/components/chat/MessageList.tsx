@@ -7,6 +7,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Button } from '../ui/button';
 import { ChevronDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface MessageListProps {
   messages: Message[];
@@ -122,141 +123,238 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
     <div className="flex-1 flex flex-col min-h-0 message-list-container relative">
       <ScrollArea ref={scrollAreaRef} className="flex-1 p-3 sm:p-4">
         {safeMessages.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="flex items-center justify-center h-full text-muted-foreground"
+          >
             <div className="text-center px-4">
-              <div className="text-3xl sm:text-4xl mb-2">💬</div>
+              <motion.div 
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                className="text-3xl sm:text-4xl mb-2"
+              >
+                💬
+              </motion.div>
               <p className="text-sm sm:text-base">还没有消息，开始聊天吧！</p>
             </div>
-          </div>
+          </motion.div>
         ) : (
           <div className="space-y-3 sm:space-y-4 chat-container">
-            {safeMessages.map((message, index) => {
-              const isOwnMessage = message.user_id === user?.id;
-              const showAvatar = index === 0 || safeMessages[index - 1].user_id !== message.user_id;
-              const showTime = index === 0 || 
-                new Date(message.timestamp).getTime() - new Date(safeMessages[index - 1].timestamp).getTime() > 300000; // 5分钟
+            <AnimatePresence initial={false}>
+              {safeMessages.map((message, index) => {
+                const isOwnMessage = message.user_id === user?.id;
+                const showAvatar = index === 0 || safeMessages[index - 1].user_id !== message.user_id;
+                const showTime = index === 0 || 
+                  new Date(message.timestamp).getTime() - new Date(safeMessages[index - 1].timestamp).getTime() > 300000; // 5分钟
 
-              return (
-                <div key={message.id} className="animate-fade-in w-full">
-                  {showTime && (
-                    <div className="flex justify-center mb-3 sm:mb-4">
-                      <span className="text-xs text-muted-foreground bg-muted px-2 sm:px-3 py-1 rounded-full">
-                        {formatTime(message.timestamp)}
-                      </span>
-                    </div>
-                  )}
-                  
-                  <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-2 w-full`}>
-                    <div className={`flex max-w-[85%] sm:max-w-[75%] md:max-w-[65%] flex-container-safe ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
-                      {/* 头像 */}
-                      {showAvatar && !isOwnMessage && (
-                        <div className="flex-shrink-0 mr-2 sm:mr-3">
-                          <Avatar className="w-7 h-7 sm:w-8 sm:h-8">
-                            <AvatarFallback className={`text-white text-xs sm:text-sm font-medium ${getAvatarColor(message.user_id)}`}>
-                              {message.username.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                        </div>
-                      )}
-                      
-                      {/* 消息内容 */}
-                      <div className={`min-w-0 flex-1 ${isOwnMessage ? 'mr-2 sm:mr-3' : showAvatar ? '' : 'ml-9 sm:ml-11'}`}>
-                        {/* 发送者名称 */}
+                return (
+                  <motion.div 
+                    key={message.id}
+                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                    transition={{ 
+                      duration: 0.3,
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 30
+                    }}
+                    className="w-full"
+                  >
+                    {showTime && (
+                      <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.1 }}
+                        className="flex justify-center mb-3 sm:mb-4"
+                      >
+                        <span className="text-xs text-muted-foreground bg-muted px-2 sm:px-3 py-1 rounded-full">
+                          {formatTime(message.timestamp)}
+                        </span>
+                      </motion.div>
+                    )}
+                    
+                    <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-2 w-full`}>
+                      <div className={`flex max-w-[85%] sm:max-w-[75%] md:max-w-[65%] flex-container-safe ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
+                        {/* 头像 */}
                         {showAvatar && !isOwnMessage && (
-                          <div className="text-xs text-muted-foreground mb-1 truncate">
-                            {message.username}
-                          </div>
+                          <motion.div 
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ delay: 0.1, type: "spring", stiffness: 300 }}
+                            className="flex-shrink-0 mr-2 sm:mr-3"
+                          >
+                            <Avatar className="w-7 h-7 sm:w-8 sm:h-8">
+                              <AvatarFallback className={`text-white text-xs sm:text-sm font-medium ${getAvatarColor(message.user_id)}`}>
+                                {message.username.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                          </motion.div>
                         )}
                         
-                        {/* 消息气泡 */}
-                        <div
-                          className={`px-3 sm:px-4 py-2 rounded-2xl message-bubble ${
-                            isOwnMessage
-                              ? 'bg-primary text-primary-foreground rounded-br-md'
-                              : 'bg-muted text-foreground rounded-bl-md'
-                          }`}
-                        >
-                          <p className="text-sm whitespace-pre-wrap break-words">
-                            {message.content}
-                          </p>
-                        </div>
-                        
-                        {/* 消息时间 */}
-                        <div className={`text-xs text-muted-foreground mt-1 ${isOwnMessage ? 'text-right' : 'text-left'}`}>
-                          {(() => {
-                            // 转换为北京时间显示
-                            const date = new Date(message.timestamp);
-                            const beijingTime = new Date(date.getTime() + (8 * 60 * 60 * 1000));
-                            return beijingTime.toLocaleTimeString('zh-CN', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              timeZone: 'Asia/Shanghai'
-                            });
-                          })()}
+                        {/* 消息内容 */}
+                        <div className={`min-w-0 flex-1 ${isOwnMessage ? 'mr-2 sm:mr-3' : showAvatar ? '' : 'ml-9 sm:ml-11'}`}>
+                          {/* 发送者名称 */}
+                          {showAvatar && !isOwnMessage && (
+                            <motion.div 
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: 0.15 }}
+                              className="text-xs text-muted-foreground mb-1 truncate"
+                            >
+                              {message.username}
+                            </motion.div>
+                          )}
+                          
+                          {/* 消息气泡 */}
+                          <motion.div
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ 
+                              delay: 0.1,
+                              type: "spring",
+                              stiffness: 400,
+                              damping: 25
+                            }}
+                            whileHover={{ scale: 1.02 }}
+                            className={`px-3 sm:px-4 py-2 rounded-2xl message-bubble ${
+                              isOwnMessage
+                                ? 'bg-primary text-primary-foreground rounded-br-md'
+                                : 'bg-muted text-foreground rounded-bl-md'
+                            }`}
+                          >
+                            <p className="text-sm whitespace-pre-wrap break-words">
+                              {message.content}
+                            </p>
+                          </motion.div>
+                          
+                          {/* 消息时间 */}
+                          <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.2 }}
+                            className={`text-xs text-muted-foreground mt-1 ${isOwnMessage ? 'text-right' : 'text-left'}`}
+                          >
+                            {(() => {
+                              // 转换为北京时间显示
+                              const date = new Date(message.timestamp);
+                              const beijingTime = new Date(date.getTime() + (8 * 60 * 60 * 1000));
+                              return beijingTime.toLocaleTimeString('zh-CN', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                timeZone: 'Asia/Shanghai'
+                              });
+                            })()}
+                          </motion.div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              );
-            })}
-            
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+
             {/* 正在输入指示器 */}
-            {safeTypingUsers.length > 0 && (
-              <div className="flex justify-start mb-2 w-full">
-                <div className="flex max-w-[85%] sm:max-w-[75%] md:max-w-[65%] flex-container-safe">
-                  <div className="flex-shrink-0 mr-2 sm:mr-3">
-                    <Avatar className="w-7 h-7 sm:w-8 sm:h-8">
-                      <AvatarFallback className="bg-muted">
-                        <div className="flex space-x-1">
-                          <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce"></div>
-                          <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                          <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                        </div>
-                      </AvatarFallback>
-                    </Avatar>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs text-muted-foreground mb-1">
-                      {safeTypingUsers.join(', ')} 正在输入...
+            <AnimatePresence>
+              {safeTypingUsers.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="flex justify-start mb-2"
+                >
+                  <div className="flex max-w-[75%] md:max-w-[65%]">
+                    <div className="flex-shrink-0 mr-2 sm:mr-3">
+                      <Avatar className="w-7 h-7 sm:w-8 sm:h-8">
+                        <AvatarFallback className="bg-gray-400 text-white text-xs sm:text-sm font-medium">
+                          ...
+                        </AvatarFallback>
+                      </Avatar>
                     </div>
-                    <div className="px-3 sm:px-4 py-2 bg-muted rounded-2xl rounded-bl-md message-bubble">
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs text-muted-foreground mb-1">
+                        {safeTypingUsers.join(', ')} 正在输入...
                       </div>
+                      <motion.div
+                        animate={{ scale: [1, 1.05, 1] }}
+                        transition={{ 
+                          duration: 1.5, 
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                        className="bg-muted text-foreground px-3 sm:px-4 py-2 rounded-2xl rounded-bl-md"
+                      >
+                        <div className="flex space-x-1">
+                          <motion.div
+                            animate={{ opacity: [0.4, 1, 0.4] }}
+                            transition={{ duration: 1.5, repeat: Infinity, delay: 0 }}
+                            className="w-2 h-2 bg-current rounded-full"
+                          />
+                          <motion.div
+                            animate={{ opacity: [0.4, 1, 0.4] }}
+                            transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }}
+                            className="w-2 h-2 bg-current rounded-full"
+                          />
+                          <motion.div
+                            animate={{ opacity: [0.4, 1, 0.4] }}
+                            transition={{ duration: 1.5, repeat: Infinity, delay: 0.4 }}
+                            className="w-2 h-2 bg-current rounded-full"
+                          />
+                        </div>
+                      </motion.div>
                     </div>
                   </div>
-                </div>
-              </div>
-            )}
-            
-            <div ref={messagesEndRef} />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </ScrollArea>
 
       {/* 滚动到底部按钮 */}
-      {showScrollButton && (
-        <div className="scroll-to-bottom-btn">
-          <Button
-            onClick={scrollToBottom}
-            size="sm"
-            className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground border-0 h-10 w-auto px-3"
-            title="滚动到底部"
+      <AnimatePresence>
+        {showScrollButton && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.8 }}
+            transition={{ 
+              type: "spring",
+              stiffness: 300,
+              damping: 30
+            }}
+            className="absolute bottom-4 right-4 z-10"
           >
-            <ChevronDown className="h-4 w-4" />
-            {unreadCount > 0 ? (
-              <span className="ml-1 unread-count text-xs">
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </span>
-            ) : (
-              <span className="ml-1 text-xs hidden sm:inline">底部</span>
-            )}
-          </Button>
-        </div>
-      )}
+            <motion.div
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={scrollToBottom}
+                className="rounded-full shadow-lg border bg-background/80 backdrop-blur-sm hover:bg-background/90"
+              >
+                <ChevronDown className="h-4 w-4" />
+                {unreadCount > 0 && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium"
+                  >
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </motion.span>
+                )}
+              </Button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
