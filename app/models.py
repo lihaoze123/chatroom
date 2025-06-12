@@ -63,6 +63,7 @@ class Room(db.Model):
     name = db.Column(db.String(100), unique=True, nullable=False, index=True)
     description = db.Column(db.Text, default='')
     is_private = db.Column(db.Boolean, default=False)
+    password_hash = db.Column(db.String(255), nullable=True)  # 添加密码哈希字段
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -100,14 +101,14 @@ class Room(db.Model):
         if not self.is_member(user):
             membership = RoomMembership(user_id=user.id, room_id=self.id)
             db.session.add(membership)
-            db.session.commit()
+            # 不在这里提交，让调用者决定何时提交
     
     def remove_member(self, user):
         """移除成员"""
         membership = RoomMembership.query.filter_by(user_id=user.id, room_id=self.id).first()
         if membership:
             db.session.delete(membership)
-            db.session.commit()
+            # 不在这里提交，让调用者决定何时提交
     
     def is_member(self, user):
         """检查是否为成员"""

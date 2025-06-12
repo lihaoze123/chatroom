@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChatRoom } from '../../types';
 import { chatAPI } from '../../services/api';
 import { useChat } from '../../contexts/ChatContext';
-import { Hash, Users, Plus, Search } from 'lucide-react';
+import { Hash, Users, Plus, Search, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
@@ -50,8 +50,8 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
     room.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleCreateRoom = async (name: string, description?: string) => {
-    const room = await createRoom(name, description);
+  const handleCreateRoom = async (name: string, description?: string, isPrivate?: boolean, password?: string) => {
+    const room = await createRoom(name, description, isPrivate, password);
     if (room) {
       setRooms(prev => [...prev, room]);
       setShowCreateModal(false);
@@ -64,27 +64,6 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
         <CardContent className="h-full flex items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </CardContent>
-        {showPasswordPrompt && pendingRoom && (
-  <PasswordPrompt
-    isOpen={showPasswordPrompt}
-    roomName={pendingRoom.name}
-    onClose={() => {
-      setShowPasswordPrompt(false);
-      setPendingRoom(null);
-    }}
-    onSubmit={async (password) => {
-      try {
-        await joinRoom(pendingRoom.id, password);
-        onRoomSelect(pendingRoom);
-        setShowPasswordPrompt(false);
-        setPendingRoom(null);
-      } catch (err) {
-        toast.error('密码错误或无法加入该房间');
-      }
-    }}
-  />
-)}
-
       </Card>
     );
   }
@@ -145,13 +124,24 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
                 >
                   <div className="flex items-center space-x-3 w-full min-w-0">
                     <div className="flex-shrink-0">
-                      <Hash className="h-4 w-4 text-muted-foreground" />
+                      {room.is_private ? (
+                        <Lock className="h-4 w-4 text-amber-500" />
+                      ) : (
+                        <Hash className="h-4 w-4 text-muted-foreground" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0 text-left">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-medium truncate flex-1">
-                          {room.name}
-                        </p>
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {room.name}
+                          </p>
+                          {room.is_private && (
+                            <span className="text-xs bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                              私密
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center text-xs text-muted-foreground flex-shrink-0">
                           <Users className="h-3 w-3 mr-1" />
                           {room.member_count || 0}
@@ -176,6 +166,29 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
         <CreateRoomModal
           onClose={() => setShowCreateModal(false)}
           onCreate={handleCreateRoom}
+        />
+      )}
+
+      {/* 密码提示框 */}
+      {showPasswordPrompt && pendingRoom && (
+        <PasswordPrompt
+          isOpen={showPasswordPrompt}
+          roomName={pendingRoom.name}
+          onClose={() => {
+            setShowPasswordPrompt(false);
+            setPendingRoom(null);
+          }}
+          onSubmit={async (password) => {
+            try {
+              await joinRoom(pendingRoom.id, password);
+              onRoomSelect(pendingRoom);
+              setShowPasswordPrompt(false);
+              setPendingRoom(null);
+            } catch (err) {
+              console.error('Password error:', err);
+              toast.error('密码错误或无法加入该房间');
+            }
+          }}
         />
       )}
     </Card>

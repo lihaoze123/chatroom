@@ -120,12 +120,10 @@ export const authAPI = {
 export const chatAPI = {
   getRooms: async (): Promise<ChatRoom[]> => {
     const response = await api.get('/api/rooms');
-    // 合并用户房间和公共房间
-    const { user_rooms = [], public_rooms = [] } = response.data;
-    // 去重，优先显示用户房间
-    const userRoomIds = new Set(user_rooms.map((room: ChatRoom) => room.id));
-    const uniquePublicRooms = public_rooms.filter((room: ChatRoom) => !userRoomIds.has(room.id));
-    return [...user_rooms, ...uniquePublicRooms];
+    // 合并用户房间和可用房间
+    const { user_rooms = [], available_rooms = [] } = response.data;
+    // 用户房间优先显示，然后是可用房间（包括公共和私密房间）
+    return [...user_rooms, ...available_rooms];
   },
 
   getRoom: async (roomId: number): Promise<ChatRoom> => {

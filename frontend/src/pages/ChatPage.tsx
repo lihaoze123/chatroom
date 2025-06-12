@@ -179,7 +179,7 @@ const ChatRoomComponent: React.FC<{ room: ChatRoomType }> = ({ room }) => {
     };
 
     handleRoomChange();
-  }, [room.id, currentRoom?.id, joinRoom, leaveRoom]);
+  }, [room.id, currentRoom?.id]); // 移除joinRoom和leaveRoom依赖
 
   if (loading) {
     return (

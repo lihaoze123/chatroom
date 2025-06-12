@@ -25,14 +25,22 @@ def api_get_rooms():
             RoomMembership.user_id == current_user.id
         ).all()
         
-        # 获取公共房间
-        public_rooms = Room.query.filter_by(is_private=False).all()
+        # 获取所有房间（包括公共房间和私密房间）
+        all_rooms = Room.query.all()
         
-        current_app.logger.debug(f'房间列表获取成功 - 用户房间数: {len(user_rooms)}, 公共房间数: {len(public_rooms)}, 用户ID: {current_user.id}')
+        # 分类房间
+        user_room_ids = {room.id for room in user_rooms}
+        available_rooms = []
+        
+        for room in all_rooms:
+            if room.id not in user_room_ids:
+                available_rooms.append(room)
+        
+        current_app.logger.debug(f'房间列表获取成功 - 用户房间数: {len(user_rooms)}, 可用房间数: {len(available_rooms)}, 用户ID: {current_user.id}')
         
         return jsonify({
             'user_rooms': [room.to_dict() for room in user_rooms],
-            'public_rooms': [room.to_dict() for room in public_rooms]
+            'available_rooms': [room.to_dict() for room in available_rooms]
         }), 200
         
     except Exception as e:
@@ -84,10 +92,13 @@ def api_create_room():
             room.set_password(password)
 
         db.session.add(room)
-        db.session.commit()
+        db.session.flush()  # 获取room.id
         
         # 创建者自动加入房间
-        room.add_member(current_user)
+        from app.models import RoomMembership
+        membership = RoomMembership(user_id=current_user.id, room_id=room.id)
+        db.session.add(membership)
+        db.session.commit()
         
         return jsonify({
             'message': f'聊天室 "{name}" 创建成功！',
@@ -104,14 +115,28 @@ def api_get_room(room_id):
     """获取房间详情API"""
     room = Room.query.get_or_404(room_id)
     
+    print(f"[DEBUG] getRoom: 用户 {current_user.username} 获取房间 {room.name} (ID: {room_id})")
+    print(f"[DEBUG] getRoom: 房间是否私密: {room.is_private}")
+    
+    # 直接查询数据库检查成员关系，避免缓存问题
+    from app.models import RoomMembership
+    membership = RoomMembership.query.filter_by(user_id=current_user.id, room_id=room_id).first()
+    is_member = membership is not None
+    print(f"[DEBUG] getRoom: 数据库查询成员关系: {membership}")
+    print(f"[DEBUG] getRoom: 用户是否为成员: {is_member}")
+    
     # 检查权限
-    if room.is_private and not room.is_member(current_user):
+    if room.is_private and not is_member:
+        print(f"[DEBUG] getRoom: 私密房间权限检查失败，返回403")
         return jsonify({'error': '无权限访问此房间'}), 403
     
     try:
         # 如果是公共房间且用户未加入，自动加入
-        if not room.is_private and not room.is_member(current_user):
-            room.add_member(current_user)
+        if not room.is_private and not is_member:
+            print(f"[DEBUG] getRoom: 公共房间自动加入")
+            membership = RoomMembership(user_id=current_user.id, room_id=room_id)
+            db.session.add(membership)
+            db.session.commit()
         
         # 获取房间成员
         members = room.get_members()
@@ -121,12 +146,15 @@ def api_get_room(room_id):
         room_data.update({
             'members': [user.to_dict() for user in members],
             'online_members': [user.to_dict() for user in online_members],
-            'is_member': room.is_member(current_user)
+            'is_member': is_member or not room.is_private  # 如果是公共房间或已是成员
         })
         
+        print(f"[DEBUG] getRoom: 成功返回房间数据")
         return jsonify({'room': room_data}), 200
         
     except Exception as e:
+        print(f"[DEBUG] getRoom: 异常发生: {e}")
+        db.session.rollback()
         return jsonify({'error': '获取房间信息失败'}), 500
 
 @bp.route('/rooms/<int:room_id>/join', methods=['POST'])
@@ -135,17 +163,38 @@ def api_join_room(room_id):
     """加入房间API（支持私密房间密码验证）"""
     room = Room.query.get_or_404(room_id)
     
+    print(f"[DEBUG] 用户 {current_user.username} 尝试加入房间 {room.name} (ID: {room_id})")
+    print(f"[DEBUG] 房间是否私密: {room.is_private}")
+    print(f"[DEBUG] 用户是否已是成员: {room.is_member(current_user)}")
+    
     try:
         if room.is_member(current_user):
+            print(f"[DEBUG] 用户已经是成员，返回200")
             return jsonify({'message': '您已经是该房间的成员'}), 200
 
         if room.is_private:
             data = request.get_json()
             password = data.get('password', '').strip() if data else ''
-            if not room.check_password(password):
+            print(f"[DEBUG] 私密房间，收到密码: {'***' if password else '(空)'}")
+            
+            password_valid = room.check_password(password)
+            print(f"[DEBUG] 密码验证结果: {password_valid}")
+            
+            if not password_valid:
+                print(f"[DEBUG] 密码错误，返回403")
                 return jsonify({'error': '密码错误，无法加入私密房间'}), 403
 
-        room.add_member(current_user)
+        # 添加成员关系
+        print(f"[DEBUG] 开始添加成员关系")
+        from app.models import RoomMembership
+        membership = RoomMembership(user_id=current_user.id, room_id=room_id)
+        db.session.add(membership)
+        db.session.commit()
+        print(f"[DEBUG] 成员关系添加成功")
+
+        # 验证成员关系
+        is_member_after = room.is_member(current_user)
+        print(f"[DEBUG] 添加后是否为成员: {is_member_after}")
 
         return jsonify({
             'message': f'成功加入聊天室 "{room.name}"',
@@ -153,6 +202,8 @@ def api_join_room(room_id):
         }), 200
 
     except Exception as e:
+        print(f"[DEBUG] 异常发生: {e}")
+        db.session.rollback()
         return jsonify({'error': '加入房间失败'}), 500
 
 
@@ -166,13 +217,19 @@ def api_leave_room(room_id):
         if not room.is_member(current_user):
             return jsonify({'error': '您不是该房间的成员'}), 400
         
-        room.remove_member(current_user)
+        # 移除成员关系
+        from app.models import RoomMembership
+        membership = RoomMembership.query.filter_by(user_id=current_user.id, room_id=room_id).first()
+        if membership:
+            db.session.delete(membership)
+            db.session.commit()
         
         return jsonify({
             'message': f'已离开聊天室 "{room.name}"'
         }), 200
         
     except Exception as e:
+        db.session.rollback()
         return jsonify({'error': '离开房间失败'}), 500
 
 @bp.route('/rooms/<int:room_id>/messages', methods=['GET'])
@@ -181,8 +238,17 @@ def api_get_messages(room_id):
     """获取房间消息API"""
     room = Room.query.get_or_404(room_id)
     
+    print(f"[DEBUG] getMessages: 用户 {current_user.username} 获取房间 {room.name} 消息")
+    
+    # 直接查询数据库检查成员关系
+    from app.models import RoomMembership
+    membership = RoomMembership.query.filter_by(user_id=current_user.id, room_id=room_id).first()
+    is_member = membership is not None
+    print(f"[DEBUG] getMessages: 用户是否为成员: {is_member}")
+    
     # 检查权限
-    if room.is_private and not room.is_member(current_user):
+    if room.is_private and not is_member:
+        print(f"[DEBUG] getMessages: 私密房间权限检查失败，返回403")
         return jsonify({'error': '无权限访问此房间'}), 403
     
     try:
@@ -200,6 +266,7 @@ def api_get_messages(room_id):
             error_out=False
         )
         
+        print(f"[DEBUG] getMessages: 成功返回 {len(messages.items)} 条消息")
         return jsonify({
             'messages': [msg.to_dict() for msg in reversed(messages.items)],
             'pagination': {
@@ -213,6 +280,7 @@ def api_get_messages(room_id):
         }), 200
         
     except Exception as e:
+        print(f"[DEBUG] getMessages: 异常发生: {e}")
         return jsonify({'error': '获取消息失败'}), 500
 
 @bp.route('/rooms/<int:room_id>/messages', methods=['POST'])

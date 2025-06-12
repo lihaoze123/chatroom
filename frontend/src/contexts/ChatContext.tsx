@@ -20,7 +20,7 @@ interface ChatContextType extends ChatState {
   leaveRoom: (roomId: number) => Promise<void>;
   sendMessage: (message: string) => void;
   loadMessages: (roomId: number) => Promise<void>;
-  createRoom: (name: string, description?: string) => Promise<ChatRoom | null>;
+  createRoom: (name: string, description?: string, isPrivate?: boolean, password?: string) => Promise<ChatRoom | null>;
   setTyping: (isTyping: boolean) => void;
   connectSocket: () => Promise<void>;
   disconnectSocket: () => void;
@@ -126,8 +126,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const setupSocketListeners = useCallback(() => {
     // 新消息
     socketService.onNewMessage((message: Message) => {
-      console.log('Received new message:', message);
-      
       dispatch({ type: 'ADD_MESSAGE', payload: message });
       
       // 如果不是当前用户发送的消息，显示通知
@@ -169,7 +167,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
 
     // 房间加入成功
     socketService.onRoomJoined((data) => {
-      console.log('Successfully joined room:', data);
       // 更新在线用户列表
       const onlineUsernames = data.online_members.map(member => member.username);
       dispatch({ type: 'SET_ONLINE_USERS', payload: onlineUsernames });
@@ -212,25 +209,19 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   }, []);
 
   const joinRoom = useCallback(async (roomId: number, password?: string): Promise<void> => {
-
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       
-      console.log('Joining room:', roomId);
-
       await chatAPI.joinRoom(roomId, password);
       
       // 获取房间信息
       const room = await chatAPI.getRoom(roomId);
-      console.log('Got room info:', room);
       dispatch({ type: 'SET_CURRENT_ROOM', payload: room });
       
       // 加载消息
       await loadMessages(roomId);
-      console.log('Loaded messages for room:', roomId);
       
       // 加入Socket房间
-      console.log('Joining socket room:', roomId);
       socketService.joinRoom(roomId);
       
       dispatch({ type: 'SET_LOADING', payload: false });
@@ -257,9 +248,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     socketService.sendMessage(currentRoomRef.current.id, message.trim());
   }, []);
 
-  const createRoom = useCallback(async (name: string, description?: string): Promise<ChatRoom | null> => {
+  const createRoom = useCallback(async (name: string, description?: string, isPrivate?: boolean, password?: string): Promise<ChatRoom | null> => {
     try {
-      const room = await chatAPI.createRoom(name, description);
+      const room = await chatAPI.createRoom(name, description, isPrivate, password);
       dispatch({ type: 'SET_ROOMS', payload: [...state.rooms, room] });
       toast.success('房间创建成功');
       return room;

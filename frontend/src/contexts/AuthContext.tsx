@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, ReactNode, useCallback } from 'react';
 import { User, AuthState, LoginData, RegisterData } from '../types';
 import { authAPI } from '../services/api';
 import toast from 'react-hot-toast';
@@ -49,31 +49,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
   // 检查用户认证状态
-  useEffect(() => {
-    const checkAuth = async () => {
-      console.log('Starting auth check...');
-      try {
-        dispatch({ type: 'SET_LOADING', payload: true });
-        console.log('Calling getCurrentUser...');
-        const user = await authAPI.getCurrentUser();
-        console.log('Got user:', user);
-        dispatch({ type: 'SET_USER', payload: user });
-      } catch (error: any) {
-        console.log('Auth check failed:', error.response?.status, error.message);
-        // 如果是401或302，说明用户未登录，这是正常情况
-        if (error.response?.status === 401 || error.response?.status === 302) {
-          console.log('User not authenticated, setting user to null');
-          dispatch({ type: 'SET_USER', payload: null });
-        } else {
-          // 其他错误也设置为未登录状态
-          console.error('Auth check error:', error);
-          dispatch({ type: 'SET_USER', payload: null });
-        }
-      }
-    };
-
-    checkAuth();
+  const checkAuth = useCallback(async () => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      const user = await authAPI.getCurrentUser();
+      dispatch({ type: 'SET_USER', payload: user });
+      dispatch({ type: 'SET_AUTHENTICATED', payload: true });
+    } catch (error: any) {
+      console.error('Auth check failed:', error.response?.status, error.message);
+      dispatch({ type: 'SET_USER', payload: null });
+      dispatch({ type: 'SET_AUTHENTICATED', payload: false });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
   }, []);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   const login = async (data: LoginData): Promise<boolean> => {
     try {
