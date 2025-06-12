@@ -44,14 +44,14 @@ const RegisterForm: React.FC = () => {
   const showPasswordError = formData.password2 && !passwordsMatch;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-6 px-4 sm:py-12 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
+        <CardHeader className="text-center px-4 sm:px-6">
           <div className="mx-auto h-12 w-12 bg-primary rounded-full flex items-center justify-center mb-4">
             <UserPlus className="h-6 w-6 text-primary-foreground" />
           </div>
-          <CardTitle className="text-2xl font-bold">创建新账户</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-xl sm:text-2xl font-bold">创建新账户</CardTitle>
+          <CardDescription className="text-sm sm:text-base">
             已有账户？{' '}
             <Link
               to="/login"
@@ -62,7 +62,7 @@ const RegisterForm: React.FC = () => {
           </CardDescription>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="px-4 sm:px-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-4">
               <div>
@@ -80,7 +80,7 @@ const RegisterForm: React.FC = () => {
                     required
                     value={formData.username}
                     onChange={handleChange}
-                    className="pl-10"
+                    className="pl-10 h-11 sm:h-12"
                     placeholder="用户名"
                   />
                 </div>
@@ -101,7 +101,7 @@ const RegisterForm: React.FC = () => {
                     required
                     value={formData.email}
                     onChange={handleChange}
-                    className="pl-10"
+                    className="pl-10 h-11 sm:h-12"
                     placeholder="邮箱地址"
                   />
                 </div>
@@ -122,7 +122,7 @@ const RegisterForm: React.FC = () => {
                     required
                     value={formData.password}
                     onChange={handleChange}
-                    className="pl-10 pr-10"
+                    className="pl-10 pr-10 h-11 sm:h-12"
                     placeholder="密码"
                   />
                   <button
@@ -154,7 +154,7 @@ const RegisterForm: React.FC = () => {
                     required
                     value={formData.password2}
                     onChange={handleChange}
-                    className={`pl-10 pr-10 ${
+                    className={`pl-10 pr-10 h-11 sm:h-12 ${
                       showPasswordError
                         ? 'border-destructive focus-visible:ring-destructive'
                         : ''
@@ -182,7 +182,7 @@ const RegisterForm: React.FC = () => {
             <Button
               type="submit"
               disabled={loading || !!showPasswordError}
-              className="w-full"
+              className="w-full h-11 sm:h-12"
               size="lg"
             >
               {loading ? (
@@ -198,11 +198,11 @@ const RegisterForm: React.FC = () => {
               )}
             </Button>
 
-            <div className="text-xs text-muted-foreground text-center">
+            <div className="text-center text-xs text-muted-foreground mt-4">
               注册即表示您同意我们的{' '}
               <button
                 type="button"
-                className="text-primary hover:text-primary/80 underline"
+                className="text-primary hover:text-primary/80 transition-colors"
                 onClick={() => {/* TODO: 显示服务条款 */}}
               >
                 服务条款
@@ -210,7 +210,7 @@ const RegisterForm: React.FC = () => {
               {' '}和{' '}
               <button
                 type="button"
-                className="text-primary hover:text-primary/80 underline"
+                className="text-primary hover:text-primary/80 transition-colors"
                 onClick={() => {/* TODO: 显示隐私政策 */}}
               >
                 隐私政策

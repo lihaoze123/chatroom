@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Smile } from 'lucide-react';
 import { Button } from '../ui/button';
-import { Separator } from '../ui/separator';
 
 interface MessageInputProps {
   onSendMessage: (message: string) => void;
@@ -12,6 +11,7 @@ interface MessageInputProps {
 const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, disabled }) => {
   const [message, setMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [showEmojiPanel, setShowEmojiPanel] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -68,6 +68,9 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, di
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
+
+      // 关闭表情面板
+      setShowEmojiPanel(false);
     }
   };
 
@@ -76,6 +79,12 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, di
       e.preventDefault();
       handleSubmit(e);
     }
+  };
+
+  const handleEmojiClick = (emoji: string) => {
+    setMessage(prev => prev + emoji);
+    setShowEmojiPanel(false);
+    textareaRef.current?.focus();
   };
 
   // 清理定时器
@@ -87,53 +96,69 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, di
     };
   }, []);
 
-  const emojis = ['😀', '😂', '😍', '🤔', '👍', '👎', '❤️', '🎉', '😢', '😡'];
+  // 点击外部关闭表情面板
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showEmojiPanel && !(event.target as Element).closest('.emoji-panel-container')) {
+        setShowEmojiPanel(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showEmojiPanel]);
+
+  const emojis = ['😀', '😂', '😍', '🤔', '👍', '👎', '❤️', '🎉', '😢', '😡', '🔥', '💯', '🎯', '⚡', '🌟', '💪'];
 
   return (
-    <div className="border-t bg-background p-4">
-      <form onSubmit={handleSubmit} className="flex items-end space-x-3">
+    <div className="border-t bg-background p-3 sm:p-4 message-input-container mobile-safe-area">
+      <form onSubmit={handleSubmit} className="flex items-end space-x-2 sm:space-x-3">
         {/* 表情按钮 */}
-        <div className="relative group">
+        <div className="relative emoji-panel-container">
           <Button
             type="button"
             variant="ghost"
             size="icon"
             title="表情"
+            onClick={() => setShowEmojiPanel(!showEmojiPanel)}
+            className="h-10 w-10 sm:h-11 sm:w-11 flex-shrink-0"
           >
             <Smile className="h-4 w-4" />
           </Button>
           
           {/* 表情面板 */}
-          <div className="absolute bottom-full left-0 mb-2 bg-popover border rounded-lg shadow-lg p-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 min-w-[240px]">
-            <div className="grid grid-cols-5 gap-3">
-              {emojis.map((emoji, index) => (
-                <Button
-                  key={index}
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setMessage(prev => prev + emoji)}
-                  className="p-1.5 text-xl h-auto"
-                >
-                  {emoji}
-                </Button>
-              ))}
+          {showEmojiPanel && (
+            <div className="absolute bottom-full left-0 mb-2 bg-popover border rounded-lg shadow-lg p-3 sm:p-4 z-50 w-64 sm:w-72">
+              <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
+                {emojis.map((emoji, index) => (
+                  <Button
+                    key={index}
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEmojiClick(emoji)}
+                    className="p-1.5 text-lg sm:text-xl h-auto aspect-square"
+                  >
+                    {emoji}
+                  </Button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* 消息输入框 */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative min-w-0">
           <textarea
             ref={textareaRef}
             value={message}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder="输入消息... (Enter发送，Shift+Enter换行)"
+            placeholder="输入消息..."
             disabled={disabled}
-            className="w-full px-4 py-3 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 resize-none disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-muted-foreground"
+            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 resize-none disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-muted-foreground text-sm sm:text-base"
             rows={1}
-            style={{ minHeight: '48px', maxHeight: '120px' }}
+            style={{ minHeight: '40px', maxHeight: '120px' }}
           />
         </div>
 
@@ -143,13 +168,14 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, di
           disabled={!message.trim() || disabled}
           size="icon"
           title="发送消息"
+          className="h-10 w-10 sm:h-11 sm:w-11 flex-shrink-0"
         >
           <Send className="h-4 w-4" />
         </Button>
       </form>
 
-      {/* 输入提示 */}
-      <div className="mt-2 text-xs text-muted-foreground">
+      {/* 输入提示 - 桌面端显示 */}
+      <div className="mt-2 text-xs text-muted-foreground hidden sm:block">
         按 Enter 发送，Shift + Enter 换行
       </div>
     </div>

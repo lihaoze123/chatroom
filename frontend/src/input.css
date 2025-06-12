@@ -76,6 +76,13 @@
   background: #a8a8a8;
 }
 
+/* 移动端滚动条优化 */
+@media (max-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+}
+
 /* 确保 ScrollArea 组件的滚动条正常显示 */
 [data-radix-scroll-area-viewport] {
   scrollbar-width: thin;
@@ -155,6 +162,14 @@
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
+/* 移动端滚动按钮优化 */
+@media (max-width: 768px) {
+  .scroll-to-bottom-btn {
+    bottom: 0.75rem;
+    right: 0.75rem;
+  }
+}
+
 @keyframes slideUp {
   from {
     opacity: 0;
@@ -176,4 +191,100 @@
   font-weight: 600;
   min-width: 1.25rem;
   text-align: center;
+}
+
+/* 移动端触摸优化 */
+@media (max-width: 768px) {
+  /* 增加按钮的触摸区域 */
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* 优化输入框在移动端的体验 */
+  input, textarea {
+    font-size: 16px; /* 防止iOS缩放 */
+  }
+  
+  /* 移动端卡片间距优化 */
+  .card {
+    border-radius: 0.5rem;
+  }
+}
+
+/* 移动端侧边栏动画 */
+.mobile-sidebar-enter {
+  transform: translateX(-100%);
+}
+
+.mobile-sidebar-enter-active {
+  transform: translateX(0);
+  transition: transform 300ms ease-in-out;
+}
+
+.mobile-sidebar-exit {
+  transform: translateX(0);
+}
+
+.mobile-sidebar-exit-active {
+  transform: translateX(-100%);
+  transition: transform 300ms ease-in-out;
+}
+
+/* 表情面板优化 */
+.emoji-panel-container {
+  position: relative;
+}
+
+@media (max-width: 640px) {
+  .emoji-panel-container .absolute {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+/* 移动端消息气泡优化 */
+@media (max-width: 640px) {
+  .message-bubble {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+}
+
+/* 防止移动端横向滚动 */
+body {
+  overflow-x: hidden;
+}
+
+/* 移动端安全区域适配 */
+@supports (padding: max(0px)) {
+  .mobile-safe-area {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* 移动端键盘弹出时的优化 */
+@media (max-width: 768px) {
+  .message-input-container {
+    position: sticky;
+    bottom: 0;
+    background: hsl(var(--background));
+    z-index: 10;
+  }
+}
+
+/* 长按选择文本优化 */
+.message-bubble p {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* 移动端头像尺寸优化 */
+@media (max-width: 640px) {
+  .avatar-mobile {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
 } 

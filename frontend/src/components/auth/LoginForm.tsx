@@ -34,14 +34,14 @@ const LoginForm: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-6 px-4 sm:py-12 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
+        <CardHeader className="text-center px-4 sm:px-6">
           <div className="mx-auto h-12 w-12 bg-primary rounded-full flex items-center justify-center mb-4">
             <LogIn className="h-6 w-6 text-primary-foreground" />
           </div>
-          <CardTitle className="text-2xl font-bold">登录您的账户</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-xl sm:text-2xl font-bold">登录您的账户</CardTitle>
+          <CardDescription className="text-sm sm:text-base">
             还没有账户？{' '}
             <Link
               to="/register"
@@ -52,7 +52,7 @@ const LoginForm: React.FC = () => {
           </CardDescription>
         </CardHeader>
         
-        <CardContent>
+        <CardContent className="px-4 sm:px-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-4">
               <div>
@@ -70,7 +70,7 @@ const LoginForm: React.FC = () => {
                     required
                     value={formData.username}
                     onChange={handleChange}
-                    className="pl-10"
+                    className="pl-10 h-11 sm:h-12"
                     placeholder="用户名"
                   />
                 </div>
@@ -91,7 +91,7 @@ const LoginForm: React.FC = () => {
                     required
                     value={formData.password}
                     onChange={handleChange}
-                    className="pl-10 pr-10"
+                    className="pl-10 pr-10 h-11 sm:h-12"
                     placeholder="密码"
                   />
                   <button
@@ -109,7 +109,7 @@ const LoginForm: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
               <div className="flex items-center">
                 <input
                   id="remember_me"
@@ -138,7 +138,7 @@ const LoginForm: React.FC = () => {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full"
+              className="w-full h-11 sm:h-12"
               size="lg"
             >
               {loading ? (
