@@ -167,17 +167,12 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, di
           type="submit"
           disabled={!message.trim() || disabled}
           size="icon"
-          title="发送消息"
           className="h-10 w-10 sm:h-11 sm:w-11 flex-shrink-0"
+          title="发送消息"
         >
           <Send className="h-4 w-4" />
         </Button>
       </form>
-
-      {/* 输入提示 - 桌面端显示 */}
-      <div className="mt-2 text-xs text-muted-foreground hidden sm:block">
-        按 Enter 发送，Shift + Enter 换行
-      </div>
     </div>
   );
 };

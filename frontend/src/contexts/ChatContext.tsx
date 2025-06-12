@@ -16,7 +16,7 @@ interface ChatState {
 }
 
 interface ChatContextType extends ChatState {
-  joinRoom: (roomId: number) => Promise<void>;
+  joinRoom: (roomId: number, password?: string) => Promise<void>;
   leaveRoom: (roomId: number) => Promise<void>;
   sendMessage: (message: string) => void;
   loadMessages: (roomId: number) => Promise<void>;
@@ -211,11 +211,14 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     }
   }, []);
 
-  const joinRoom = useCallback(async (roomId: number): Promise<void> => {
+  const joinRoom = useCallback(async (roomId: number, password?: string): Promise<void> => {
+
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       
       console.log('Joining room:', roomId);
+
+      await chatAPI.joinRoom(roomId, password);
       
       // 获取房间信息
       const room = await chatAPI.getRoom(roomId);

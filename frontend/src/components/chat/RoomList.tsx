@@ -9,6 +9,8 @@ import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
+import PasswordPrompt from '../ui/PasswordPrompt';
+
 
 interface RoomListProps {
   onRoomSelect: (room: ChatRoom) => void;
@@ -20,7 +22,11 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const { createRoom } = useChat();
+  const { createRoom, joinRoom } = useChat();
+
+
+  const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
+  const [pendingRoom, setPendingRoom] = useState<ChatRoom | null>(null);
 
   useEffect(() => {
     loadRooms();
@@ -58,6 +64,27 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
         <CardContent className="h-full flex items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </CardContent>
+        {showPasswordPrompt && pendingRoom && (
+  <PasswordPrompt
+    isOpen={showPasswordPrompt}
+    roomName={pendingRoom.name}
+    onClose={() => {
+      setShowPasswordPrompt(false);
+      setPendingRoom(null);
+    }}
+    onSubmit={async (password) => {
+      try {
+        await joinRoom(pendingRoom.id, password);
+        onRoomSelect(pendingRoom);
+        setShowPasswordPrompt(false);
+        setPendingRoom(null);
+      } catch (err) {
+        toast.error('密码错误或无法加入该房间');
+      }
+    }}
+  />
+)}
+
       </Card>
     );
   }
@@ -107,7 +134,14 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
                   key={room.id}
                   variant={selectedRoomId === room.id ? "secondary" : "ghost"}
                   className="w-full justify-start h-auto p-3 lg:p-4"
-                  onClick={() => onRoomSelect(room)}
+                  onClick={() => {
+                    if (room.is_private) {
+                      setPendingRoom(room);
+                      setShowPasswordPrompt(true);
+                    } else {
+                      onRoomSelect(room);
+                    }
+                  }}
                 >
                   <div className="flex items-center space-x-3 w-full min-w-0">
                     <div className="flex-shrink-0">
@@ -150,20 +184,35 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
 
 interface CreateRoomModalProps {
   onClose: () => void;
-  onCreate: (name: string, description?: string) => void;
+  onCreate: (
+    name: string,
+    description?: string,
+    isPrivate?: boolean,
+    password?: string
+  ) => void;
 }
+
 
 const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ onClose, onCreate }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [password, setPassword] = useState('');
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
     setLoading(true);
-    await onCreate(name.trim(), description.trim() || undefined);
+    await onCreate(
+      name.trim(),
+      description.trim() || undefined,
+      isPrivate,
+      isPrivate ? password.trim() : undefined
+    );
     setLoading(false);
   };
 
@@ -205,6 +254,35 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ onClose, onCreate }) 
               />
             </div>
 
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center space-x-2">
+        <input
+        type="checkbox"
+        checked={isPrivate}
+        onChange={(e) => setIsPrivate(e.target.checked)}
+      />
+      <span>是否为私密聊天室</span>
+    </label>
+  </div>
+
+{isPrivate && (
+  <div className="space-y-2">
+    <label htmlFor="roomPassword" className="text-sm font-medium">
+      聊天室密码 *
+    </label>
+    <Input
+      id="roomPassword"
+      type="password"
+      required
+      value={password}
+      onChange={(e) => setPassword(e.target.value)}
+      placeholder="请输入密码"
+      className="h-10"
+    />
+  </div>
+)}
+
+
             <div className="flex flex-col sm:flex-row gap-2 pt-2">
               <Button
                 type="button"
@@ -232,6 +310,9 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ onClose, onCreate }) 
             </div>
           </form>
         </CardContent>
+
+
+
       </Card>
     </div>
   );

@@ -172,90 +172,64 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room }) => {
       <Separator />
 
       {/* 主要内容区域 */}
-      <CardContent className="flex-1 flex p-0 overflow-hidden relative">
+      <CardContent className="flex-1 p-0 flex relative">
         {/* 消息区域 */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          <MessageList messages={messages} typingUsers={typingUsers} />
-          <MessageInput
+        <div className="flex-1 flex flex-col min-w-0">
+          <MessageList 
+            messages={messages} 
+            typingUsers={typingUsers}
+          />
+          <MessageInput 
             onSendMessage={handleSendMessage}
             onTyping={handleTyping}
             disabled={!connected}
           />
         </div>
 
-        {/* 用户列表侧边栏 - 桌面端 */}
+        {/* 用户列表侧边栏 */}
         {showUserList && (
           <>
-            <Separator orientation="vertical" className="hidden lg:block" />
-            <div className="hidden lg:block w-64 bg-muted/30 flex-shrink-0">
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold">
-                    在线用户 ({onlineUsers.length})
-                  </h3>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setShowUserList(false)}
-                    className="h-6 w-6"
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-                <ScrollArea className="h-[400px]">
-                  <div className="space-y-2">
-                    {onlineUsers.map((username, index) => (
-                      <div key={index} className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <span className="text-sm">{username}</span>
-                        {username === user?.username && (
-                          <span className="text-xs text-muted-foreground">(你)</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* 移动端用户列表弹窗 */}
-        {showUserList && (
-          <div className="lg:hidden fixed inset-0 bg-black/50 z-50 flex items-end">
-            <div className="bg-background w-full max-h-[60vh] rounded-t-lg">
-              <div className="p-4 border-b">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">
-                    在线用户 ({onlineUsers.length})
-                  </h3>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setShowUserList(false)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
+            {/* 移动端遮罩层 */}
+            <div 
+              className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+              onClick={() => setShowUserList(false)}
+            />
+            
+            {/* 用户列表 */}
+            <div className="fixed right-0 top-0 bottom-0 w-64 bg-background border-l z-50 lg:relative lg:w-56 lg:z-auto">
+              <div className="flex items-center justify-between p-4 border-b lg:hidden">
+                <h3 className="font-semibold">在线用户</h3>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowUserList(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
               
-              <ScrollArea className="max-h-[40vh] p-4">
-                <div className="space-y-3">
+              <div className="hidden lg:block p-4 border-b">
+                <h3 className="font-semibold text-sm">在线用户 ({onlineUsers.length})</h3>
+              </div>
+
+              <ScrollArea className="flex-1">
+                <div className="p-2 space-y-1">
                   {onlineUsers.map((username, index) => (
-                    <div key={index} className="flex items-center space-x-3 p-2 rounded-lg bg-muted/30">
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      <span className="text-sm font-medium">{username}</span>
-                      {username === user?.username && (
-                        <span className="text-xs text-muted-foreground bg-primary/10 px-2 py-1 rounded-full">
-                          你
-                        </span>
-                      )}
+                    <div
+                      key={index}
+                      className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted/50"
+                    >
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-sm font-medium truncate">
+                        {username}
+                        {username === user?.username && ' (你)'}
+                      </span>
                     </div>
                   ))}
                 </div>
               </ScrollArea>
             </div>
-          </div>
+          </>
         )}
       </CardContent>
     </Card>
