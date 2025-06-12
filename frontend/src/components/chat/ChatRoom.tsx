@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useChat } from '../../contexts/ChatContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { ChatRoom as ChatRoomType } from '../../types';
+import { preprocessMessage } from '../../utils/encryption';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import { Hash, Users, Settings, LogOut } from 'lucide-react';
@@ -32,7 +33,18 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room }) => {
   }, [room.id]);
 
   const handleSendMessage = (message: string) => {
-    sendMessage(message);
+    if (!message.trim()) return;
+    
+    // 预处理消息
+    const { isValid, cleanMessage, error } = preprocessMessage(message);
+    
+    if (!isValid) {
+      console.error('消息发送失败:', error);
+      // 这里可以添加用户提示
+      return;
+    }
+    
+    sendMessage(cleanMessage);
   };
 
   const handleTyping = (isTyping: boolean) => {
@@ -159,4 +171,4 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room }) => {
   );
 };
 
-export default ChatRoom; 
+export default ChatRoom;

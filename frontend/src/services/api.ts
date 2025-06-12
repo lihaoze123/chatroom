@@ -156,4 +156,28 @@ export const chatAPI = {
   },
 };
 
-export default api; 
+// 通用API请求函数
+export const apiRequest = async (url: string, options: RequestInit = {}) => {
+  const fullUrl = `${API_BASE_URL}${url}`;
+  
+  const defaultOptions: RequestInit = {
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+    ...options,
+  };
+  
+  const response = await fetch(fullUrl, defaultOptions);
+  
+  // 处理401未授权错误
+  if (response.status === 401 && !url.includes('/api/auth/profile')) {
+    window.location.href = '/login';
+    throw new Error('Unauthorized');
+  }
+  
+  return response;
+};
+
+export default api;

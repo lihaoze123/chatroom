@@ -6,7 +6,8 @@ from flask_login import login_required, current_user
 from sqlalchemy import desc
 from app import db
 from app.api import bp
-from app.models import Room, Message, RoomMembership, User
+from app.models import Room, Message, RoomMembership, User, PrivateChat
+from app.crypto_utils import decrypt_private_message
 
 @bp.route('/rooms', methods=['GET'])
 @login_required
@@ -38,6 +39,178 @@ def api_get_rooms():
     except Exception as e:
         current_app.logger.error(f'获取房间列表失败 - 用户ID: {current_user.id}, IP: {client_ip}, 错误: {str(e)}')
         return jsonify({'error': '获取房间列表失败'}), 500
+
+@bp.route('/private-chats', methods=['GET'])
+@login_required
+def api_get_private_chats():
+    """获取私聊列表API"""
+    from app.utils import get_client_ip
+    from flask import current_app
+    
+    client_ip = get_client_ip()
+    current_app.logger.debug(f'获取私聊列表请求 - 用户ID: {current_user.id}, IP: {client_ip}')
+    
+    try:
+        # 获取用户的所有私聊
+        private_chats = PrivateChat.query.filter(
+            (PrivateChat.user1_id == current_user.id) | 
+            (PrivateChat.user2_id == current_user.id)
+        ).order_by(PrivateChat.last_message_at.desc()).all()
+        
+        private_chats_data = []
+        for chat in private_chats:
+            other_user = chat.get_other_user(current_user.id)
+            if other_user:
+                # 获取最后一条消息
+                last_message = Message.query.filter_by(
+                    room_id=chat.room_id,
+                    is_deleted=False
+                ).order_by(Message.timestamp.desc()).first()
+            
+                last_message_content = None
+                last_message_time = None
+                if last_message:
+                    # 解密私聊消息
+                    if hasattr(last_message, 'is_encrypted') and last_message.is_encrypted:
+                        decrypted_content = decrypt_private_message(
+                            last_message.content,
+                            chat.user1_id,
+                            chat.user2_id,
+                            chat.room_id
+                        )
+                        last_message_content = decrypted_content if decrypted_content else "[加密消息]"
+                    else:
+                        last_message_content = last_message.content
+                    last_message_time = last_message.timestamp.isoformat()
+                
+                chat_data = {
+                    'id': chat.id,
+                    'room_id': chat.room_id,
+                    'other_user': other_user.to_dict(),
+                    'last_message': last_message.to_dict() if last_message else None,
+                    'last_message_at': chat.last_message_at.isoformat() if chat.last_message_at else None
+                }
+                private_chats_data.append(chat_data)
+        
+        current_app.logger.debug(f'私聊列表获取成功 - 私聊数量: {len(private_chats_data)}, 用户ID: {current_user.id}')
+        
+        return jsonify({
+            'private_chats': private_chats_data
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f'获取私聊列表失败 - 用户ID: {current_user.id}, IP: {client_ip}, 错误: {str(e)}')
+        return jsonify({'error': '获取私聊列表失败'}), 500
+
+@bp.route('/private-chats', methods=['POST'])
+@login_required
+def api_create_private_chat():
+    """创建私聊API"""
+    from app.utils import get_client_ip
+    from flask import current_app
+    
+    client_ip = get_client_ip()
+    data = request.get_json()
+    
+    if not data:
+        current_app.logger.warning(f'创建私聊失败：无效的JSON数据 - 用户ID: {current_user.id}, IP: {client_ip}')
+        return jsonify({'error': '请提供有效的JSON数据'}), 400
+    
+    target_user_id = data.get('target_user_id')
+    if not target_user_id:
+        current_app.logger.warning(f'创建私聊失败：缺少目标用户ID - 用户ID: {current_user.id}, IP: {client_ip}')
+        return jsonify({'error': '请提供目标用户ID'}), 400
+    
+    if target_user_id == current_user.id:
+        current_app.logger.warning(f'创建私聊失败：不能与自己私聊 - 用户ID: {current_user.id}, IP: {client_ip}')
+        return jsonify({'error': '不能与自己私聊'}), 400
+    
+    # 检查目标用户是否存在
+    target_user = User.query.get(target_user_id)
+    if not target_user:
+        current_app.logger.warning(f'创建私聊失败：目标用户不存在 - 用户ID: {current_user.id}, 目标用户ID: {target_user_id}, IP: {client_ip}')
+        return jsonify({'error': '目标用户不存在'}), 404
+    
+    try:
+        # 获取或创建私聊
+        private_chat = PrivateChat.get_or_create_private_chat(current_user.id, target_user_id)
+        
+        if not private_chat:
+            current_app.logger.error(f'创建私聊失败 - 用户ID: {current_user.id}, 目标用户ID: {target_user_id}, IP: {client_ip}')
+            return jsonify({'error': '创建私聊失败'}), 500
+        
+        current_app.logger.info(f'私聊创建成功 - 用户ID: {current_user.id}, 目标用户ID: {target_user_id}, 房间ID: {private_chat.room_id}')
+        
+        return jsonify({
+            'private_chat': private_chat.to_dict(current_user.id),
+            'room': private_chat.room.to_dict()
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'创建私聊失败 - 用户ID: {current_user.id}, 目标用户ID: {target_user_id}, IP: {client_ip}, 错误: {str(e)}')
+        return jsonify({'error': '创建私聊失败'}), 500
+
+@bp.route('/users', methods=['GET'])
+@login_required
+def api_get_users():
+    """获取用户列表API（用于创建私聊）"""
+    from app.utils import get_client_ip
+    from flask import current_app
+    
+    client_ip = get_client_ip()
+    current_app.logger.debug(f'获取用户列表请求 - 用户ID: {current_user.id}, IP: {client_ip}')
+    
+    try:
+        # 获取搜索关键词
+        search = request.args.get('search', '').strip()
+        page = request.args.get('page', 1, type=int)
+        per_page = min(request.args.get('per_page', 20, type=int), 50)  # 限制每页最多50个
+        
+        # 构建查询
+        query = User.query.filter(User.id != current_user.id)  # 排除当前用户
+        
+        if search:
+            query = query.filter(
+                (User.username.contains(search)) |
+                (User.email.contains(search))
+            )
+        
+        # 分页查询
+        users_pagination = query.order_by(User.username).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        
+        users_data = []
+        for user in users_pagination.items:
+            user_data = user.to_dict()
+            # 检查是否已有私聊
+            existing_chat = PrivateChat.query.filter(
+                ((PrivateChat.user1_id == current_user.id) & (PrivateChat.user2_id == user.id)) |
+                ((PrivateChat.user1_id == user.id) & (PrivateChat.user2_id == current_user.id))
+            ).first()
+            user_data['has_private_chat'] = existing_chat is not None
+            if existing_chat:
+                user_data['private_chat_room_id'] = existing_chat.room_id
+            users_data.append(user_data)
+        
+        current_app.logger.debug(f'用户列表获取成功 - 用户数量: {len(users_data)}, 当前用户ID: {current_user.id}')
+        
+        return jsonify({
+            'users': users_data,
+            'pagination': {
+                'page': users_pagination.page,
+                'pages': users_pagination.pages,
+                'per_page': users_pagination.per_page,
+                'total': users_pagination.total,
+                'has_next': users_pagination.has_next,
+                'has_prev': users_pagination.has_prev
+            }
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f'获取用户列表失败 - 用户ID: {current_user.id}, IP: {client_ip}, 错误: {str(e)}')
+        return jsonify({'error': '获取用户列表失败'}), 500
 
 @bp.route('/rooms', methods=['POST'])
 @login_required
@@ -184,8 +357,31 @@ def api_get_messages(room_id):
             error_out=False
         )
         
+        # 获取私聊信息（如果是私聊房间）
+        private_chat = None
+        if hasattr(room, 'room_type') and room.room_type == 'private':
+            private_chat = PrivateChat.query.filter_by(room_id=room_id).first()
+        
+        # 处理消息列表
+        message_list = []
+        for msg in reversed(messages.items):
+            message_dict = msg.to_dict()
+            
+            # 解密私聊消息
+            if hasattr(msg, 'is_encrypted') and msg.is_encrypted and private_chat:
+                decrypted_content = decrypt_private_message(
+                    msg.content,
+                    private_chat.user1_id,
+                    private_chat.user2_id,
+                    room_id
+                )
+                if decrypted_content:
+                    message_dict['content'] = decrypted_content
+            
+            message_list.append(message_dict)
+        
         return jsonify({
-            'messages': [msg.to_dict() for msg in reversed(messages.items)],
+            'messages': message_list,
             'pagination': {
                 'page': messages.page,
                 'pages': messages.pages,
@@ -336,4 +532,4 @@ def api_get_room_members(room_id):
         }), 200
         
     except Exception as e:
-        return jsonify({'error': '获取房间成员失败'}), 500 
+        return jsonify({'error': '获取房间成员失败'}), 500

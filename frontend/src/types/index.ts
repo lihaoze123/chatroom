@@ -13,6 +13,7 @@ export interface User {
   website?: string;
   created_at: string;
   updated_at: string;
+  is_online?: boolean;
 }
 
 export interface ChatRoom {
@@ -22,9 +23,36 @@ export interface ChatRoom {
   created_at: string;
   created_by: number;
   is_private: boolean;
+  room_type: 'group' | 'private';
   member_count: number;
   online_count: number;
   users?: User[];
+}
+
+export interface PrivateChat {
+  id: number;
+  room_id: number;
+  other_user: User;
+  last_message?: Message;
+  last_message_at?: string;
+  created_at: string;
+}
+
+export interface UserWithChatInfo extends User {
+  has_private_chat: boolean;
+  private_chat_room_id?: number;
+}
+
+export interface UserListResponse {
+  users: UserWithChatInfo[];
+  pagination: {
+    page: number;
+    pages: number;
+    per_page: number;
+    total: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
 }
 
 export interface Message {
@@ -38,6 +66,7 @@ export interface Message {
   timestamp: string;
   edited_at?: string;
   is_deleted: boolean;
+  is_encrypted?: boolean;
 }
 
 export interface AuthState {
@@ -75,4 +104,4 @@ export interface ApiResponse<T = any> {
   data?: T;
   message?: string;
   error?: string;
-} 
+}

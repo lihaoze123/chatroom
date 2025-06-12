@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Message } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
+import { Shield } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { ScrollArea } from '../ui/scroll-area';
@@ -163,8 +164,11 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
                       <div className={`min-w-0 flex-1 ${isOwnMessage ? 'mr-3' : showAvatar ? '' : 'ml-11'}`}>
                         {/* 发送者名称 */}
                         {showAvatar && !isOwnMessage && (
-                          <div className="text-xs text-muted-foreground mb-1 truncate">
+                          <div className="text-xs text-muted-foreground mb-1 truncate flex items-center">
                             {message.username}
+                            {message.is_encrypted && (
+                              <Shield className="w-3 h-3 text-green-500 mx-1" />
+                            )}
                           </div>
                         )}
                         
@@ -261,4 +265,4 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
   );
 };
 
-export default MessageList; 
+export default MessageList;

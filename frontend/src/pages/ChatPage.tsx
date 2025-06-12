@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useChat } from '../contexts/ChatContext';
-import { ChatRoom as ChatRoomType } from '../types';
+import { ChatRoom as ChatRoomType, PrivateChat } from '../types';
 import RoomList from '../components/chat/RoomList';
+import PrivateChatList from '../components/chat/PrivateChatList';
 import ChatRoom from '../components/chat/ChatRoom';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Users, User } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/card';
+
+type ChatMode = 'rooms' | 'private';
 
 const ChatPage: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const { connectSocket, disconnectSocket } = useChat();
   const [selectedRoom, setSelectedRoom] = useState<ChatRoomType | null>(null);
+  const [selectedPrivateChat, setSelectedPrivateChat] = useState<PrivateChat | null>(null);
+  const [chatMode, setChatMode] = useState<ChatMode>('rooms');
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -26,7 +31,32 @@ const ChatPage: React.FC = () => {
 
   const handleRoomSelect = async (room: ChatRoomType) => {
     setSelectedRoom(room);
+    setSelectedPrivateChat(null);
     // 这里会触发ChatContext中的joinRoom
+  };
+
+  const handlePrivateChatSelect = async (chat: PrivateChat) => {
+    setSelectedPrivateChat(chat);
+    setSelectedRoom(null);
+    // 将私聊转换为ChatRoom格式以复用现有组件
+    const privateChatRoom: ChatRoomType = {
+      id: chat.room_id,
+      name: chat.other_user.username,
+      description: `与 ${chat.other_user.username} 的私聊`,
+      created_at: chat.created_at,
+      created_by: chat.other_user.id,
+      is_private: true,
+      room_type: 'private',
+      member_count: 2,
+      online_count: chat.other_user.is_online ? 2 : 1,
+    };
+    setSelectedRoom(privateChatRoom);
+  };
+
+  const handleModeChange = (mode: ChatMode) => {
+    setChatMode(mode);
+    setSelectedRoom(null);
+    setSelectedPrivateChat(null);
   };
 
   if (!isAuthenticated || !user) {
@@ -44,12 +74,50 @@ const ChatPage: React.FC = () => {
 
   return (
     <div className="h-screen flex bg-background overflow-hidden">
-      {/* 左侧边栏 - 聊天室列表 */}
-      <div className="w-80 flex-shrink-0">
-        <RoomList
-          onRoomSelect={handleRoomSelect}
-          selectedRoomId={selectedRoom?.id}
-        />
+      {/* 左侧边栏 */}
+      <div className="w-80 flex-shrink-0 flex flex-col">
+        {/* 模式切换标签 */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="flex">
+            <button
+              onClick={() => handleModeChange('rooms')}
+              className={`flex-1 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                chatMode === 'rooms'
+                  ? 'border-blue-500 text-blue-600 bg-blue-50'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <Users className="w-4 h-4 inline mr-2" />
+              群聊
+            </button>
+            <button
+              onClick={() => handleModeChange('private')}
+              className={`flex-1 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                chatMode === 'private'
+                  ? 'border-blue-500 text-blue-600 bg-blue-50'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <User className="w-4 h-4 inline mr-2" />
+              私聊
+            </button>
+          </div>
+        </div>
+
+        {/* 内容区域 */}
+        <div className="flex-1 overflow-hidden">
+          {chatMode === 'rooms' ? (
+            <RoomList
+              onRoomSelect={handleRoomSelect}
+              selectedRoomId={selectedRoom?.id}
+            />
+          ) : (
+            <PrivateChatList
+              onSelectChat={handlePrivateChatSelect}
+              selectedChatId={selectedPrivateChat?.id}
+            />
+          )}
+        </div>
       </div>
 
       {/* 主要内容区域 */}
@@ -67,7 +135,10 @@ const ChatPage: React.FC = () => {
                   欢迎来到聊天室！
                 </h3>
                 <p className="text-muted-foreground mb-4">
-                  选择一个聊天室开始聊天，或者创建一个新的聊天室。
+                  {chatMode === 'rooms' 
+                    ? '选择一个群聊开始聊天，或者创建一个新的群聊。'
+                    : '选择一个私聊开始对话，或者创建一个新的私聊。'
+                  }
                 </p>
                 <div className="text-sm text-muted-foreground">
                   当前用户：{user.username}
@@ -130,4 +201,4 @@ const ChatRoomComponent: React.FC<{ room: ChatRoomType }> = ({ room }) => {
   return <ChatRoom room={room} />;
 };
 
-export default ChatPage; 
+export default ChatPage;

@@ -4,7 +4,8 @@
 from flask_socketio import emit, join_room, leave_room, disconnect
 from flask_login import current_user
 from app import socketio, db
-from app.models import Room, Message, User
+from app.models import Room, Message, User, PrivateChat
+from app.crypto_utils import encrypt_private_message, decrypt_private_message, validate_message_integrity, sanitize_message
 import logging
 
 logger = logging.getLogger(__name__)
@@ -158,21 +159,85 @@ def handle_send_message(data):
         return
     
     try:
+        # 验证和清理消息内容
+        if not validate_message_integrity(content):
+            emit('error', {'message': '消息格式无效'})
+            return
+        
+        sanitized_content = sanitize_message(content)
+        
+        # 处理消息加密（仅私聊）
+        stored_content = sanitized_content
+        is_encrypted = False
+        
+        if room.room_type == 'private':
+            private_chat = PrivateChat.query.filter_by(room_id=room_id).first()
+            if private_chat:
+                # 加密私聊消息
+                encrypted_content = encrypt_private_message(
+                    sanitized_content, 
+                    private_chat.user1_id, 
+                    private_chat.user2_id, 
+                    room_id
+                )
+                if encrypted_content:
+                    stored_content = encrypted_content
+                    is_encrypted = True
+        
         # 创建消息
         message = Message(
-            content=content,
+            content=stored_content,
             message_type='text',
             user_id=current_user.id,
-            room_id=room_id
+            room_id=room_id,
+            is_encrypted=is_encrypted
         )
         db.session.add(message)
+        
+        # 如果是私聊房间，更新最后消息时间
+        if room.room_type == 'private':
+            private_chat = PrivateChat.query.filter_by(room_id=room_id).first()
+            if private_chat:
+                private_chat.last_message_at = message.timestamp
+        
         db.session.commit()
+        
+        # 准备广播消息数据
+        broadcast_content = sanitized_content  # 广播时使用原始内容
+        
+        # 如果是加密消息，需要为每个接收者解密
+        if is_encrypted and room.room_type == 'private':
+            private_chat = PrivateChat.query.filter_by(room_id=room_id).first()
+            if private_chat:
+                # 解密消息用于广播
+                decrypted_content = decrypt_private_message(
+                    stored_content,
+                    private_chat.user1_id,
+                    private_chat.user2_id,
+                    room_id
+                )
+                if decrypted_content:
+                    broadcast_content = decrypted_content
         
         # 构建消息数据
         message_data = message.to_dict()
+        message_data['content'] = broadcast_content
+        message_data['is_encrypted'] = is_encrypted
         
         # 广播消息到房间内所有用户
         emit('new_message', message_data, room=str(room_id))
+        
+        # 如果是私聊，发送特殊的私聊消息通知
+        if room.room_type == 'private':
+            private_chat = PrivateChat.query.filter_by(room_id=room_id).first()
+            if private_chat:
+                other_user = private_chat.get_other_user(current_user.id)
+                if other_user:
+                    emit('private_message_notification', {
+                        'message': message_data,
+                        'from_user': current_user.to_dict(),
+                        'private_chat_id': private_chat.id
+                    }, room=str(room_id))
         
         logger.info(f'用户 {current_user.username} 在房间 {room.name} 发送消息: {content[:50]}...')
         
@@ -255,4 +320,4 @@ def handle_get_online_users(data):
 @socketio.on('ping')
 def handle_ping():
     """处理心跳检测"""
-    emit('pong') 
+    emit('pong')
