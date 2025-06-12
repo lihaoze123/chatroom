@@ -5,6 +5,7 @@ import { ChatRoom as ChatRoomType } from '../types';
 import RoomList from '../components/chat/RoomList';
 import ChatRoom from '../components/chat/ChatRoom';
 import { MessageCircle } from 'lucide-react';
+import { Card, CardContent } from '../components/ui/card';
 
 const ChatPage: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
@@ -30,17 +31,19 @@ const ChatPage: React.FC = () => {
 
   if (!isAuthenticated || !user) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-500">正在验证身份...</p>
-        </div>
+      <div className="h-screen flex items-center justify-center bg-background">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center p-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+            <p className="text-muted-foreground">正在验证身份...</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex bg-gray-100">
+    <div className="h-screen flex bg-background overflow-hidden">
       {/* 左侧边栏 - 聊天室列表 */}
       <div className="w-80 flex-shrink-0">
         <RoomList
@@ -50,26 +53,28 @@ const ChatPage: React.FC = () => {
       </div>
 
       {/* 主要内容区域 */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {selectedRoom ? (
           <ChatRoomComponent room={selectedRoom} />
         ) : (
-          <div className="h-full flex items-center justify-center bg-white">
-            <div className="text-center">
-              <div className="mx-auto h-16 w-16 bg-primary-100 rounded-full flex items-center justify-center mb-4">
-                <MessageCircle className="h-8 w-8 text-primary-600" />
+          <Card className="h-full">
+            <CardContent className="h-full flex items-center justify-center">
+              <div className="text-center">
+                <div className="mx-auto h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                  <MessageCircle className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-lg font-medium text-foreground mb-2">
+                  欢迎来到聊天室！
+                </h3>
+                <p className="text-muted-foreground mb-4">
+                  选择一个聊天室开始聊天，或者创建一个新的聊天室。
+                </p>
+                <div className="text-sm text-muted-foreground">
+                  当前用户：{user.username}
+                </div>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                欢迎来到聊天室！
-              </h3>
-              <p className="text-gray-500 mb-4">
-                选择一个聊天室开始聊天，或者创建一个新的聊天室。
-              </p>
-              <div className="text-sm text-gray-400">
-                当前用户：{user.username}
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
@@ -111,12 +116,14 @@ const ChatRoomComponent: React.FC<{ room: ChatRoomType }> = ({ room }) => {
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center bg-white">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-500">正在加入聊天室...</p>
-        </div>
-      </div>
+      <Card className="h-full">
+        <CardContent className="h-full flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">正在加入聊天室...</p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 

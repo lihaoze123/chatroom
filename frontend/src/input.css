@@ -2,6 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 84% 4.9%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 94.1%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
 /* 自定义滚动条样式 */
 ::-webkit-scrollbar {
   width: 6px;
@@ -18,4 +74,106 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+/* 确保 ScrollArea 组件的滚动条正常显示 */
+[data-radix-scroll-area-viewport] {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+
+/* 为 ScrollArea 添加更好的滚动条样式 */
+[data-radix-scroll-area-scrollbar] {
+  display: flex !important;
+  user-select: none;
+  touch-action: none;
+  padding: 2px;
+  background: transparent;
+  transition: background-color 150ms ease;
+}
+
+[data-radix-scroll-area-scrollbar]:hover {
+  background: hsl(var(--muted));
+}
+
+[data-radix-scroll-area-thumb] {
+  background: hsl(var(--border));
+  border-radius: 4px;
+  position: relative;
+  transition: background-color 150ms ease;
+}
+
+[data-radix-scroll-area-thumb]:hover {
+  background: hsl(var(--border) / 0.8);
+}
+
+/* 防止消息越界的额外样式 */
+.chat-container {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.message-bubble {
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  max-width: 100%;
+}
+
+/* 确保flex容器不会越界 */
+.flex-container-safe {
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* 消息列表容器样式 */
+.message-list-container {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 滚动到底部按钮样式 */
+.scroll-to-bottom-btn {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 10;
+  border-radius: 9999px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease-in-out;
+  animation: slideUp 0.3s ease-out;
+}
+
+.scroll-to-bottom-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 未读消息计数样式 */
+.unread-count {
+  background: hsl(var(--destructive));
+  color: hsl(var(--destructive-foreground));
+  border-radius: 9999px;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  min-width: 1.25rem;
+  text-align: center;
 } 
