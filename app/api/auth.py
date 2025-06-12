@@ -45,35 +45,83 @@ def api_register():
     current_app.logger.debug(f'注册尝试 - 用户名: {username}, 邮箱: {email}, IP: {client_ip}')
     
     # 验证必填字段
-    if not all([username, email, password]):
-        current_app.logger.warning(f'注册失败：缺少必填字段 - 用户名: {username}, 邮箱: {email}, IP: {client_ip}')
-        return jsonify({'error': '用户名、邮箱和密码都是必填项'}), 400
+    if not username:
+        current_app.logger.warning(f'注册失败：缺少用户名 - IP: {client_ip}')
+        return jsonify({
+            'error': '请输入用户名',
+            'field': 'username',
+            'code': 'REQUIRED'
+        }), 400
+    if not email:
+        current_app.logger.warning(f'注册失败：缺少邮箱 - IP: {client_ip}')
+        return jsonify({
+            'error': '请输入邮箱地址',
+            'field': 'email',
+            'code': 'REQUIRED'
+        }), 400
+    if not password:
+        current_app.logger.warning(f'注册失败：缺少密码 - IP: {client_ip}')
+        return jsonify({
+            'error': '请输入密码',
+            'field': 'password',
+            'code': 'REQUIRED'
+        }), 400
     
-    # 验证用户名长度
-    if len(username) < 3 or len(username) > 20:
+    # 验证用户名长度和格式
+    if len(username) < 2 or len(username) > 20:
         current_app.logger.warning(f'注册失败：用户名长度无效 - 用户名: {username}, 长度: {len(username)}, IP: {client_ip}')
-        return jsonify({'error': '用户名长度必须在3-20个字符之间'}), 400
+        return jsonify({
+            'error': '用户名长度必须在2-20个字符之间',
+            'field': 'username',
+            'code': 'INVALID_LENGTH'
+        }), 400
+    
+    # 验证用户名字符（允许中文、英文、数字、下划线）
+    import re
+    if not re.match(r'^[\u4e00-\u9fa5a-zA-Z0-9_]+$', username):
+        current_app.logger.warning(f'注册失败：用户名包含无效字符 - 用户名: {username}, IP: {client_ip}')
+        return jsonify({
+            'error': '用户名只能包含中文、英文字母、数字和下划线',
+            'field': 'username',
+            'code': 'INVALID_CHARACTERS'
+        }), 400
     
     # 验证邮箱格式
     if not validate_email(email):
         current_app.logger.warning(f'注册失败：邮箱格式无效 - 邮箱: {email}, IP: {client_ip}')
-        return jsonify({'error': '请输入有效的邮箱地址'}), 400
+        return jsonify({
+            'error': '请输入有效的邮箱地址',
+            'field': 'email',
+            'code': 'INVALID_FORMAT'
+        }), 400
     
     # 验证密码强度
     is_valid, error_msg = validate_password(password)
     if not is_valid:
         current_app.logger.warning(f'注册失败：密码强度不足 - 用户名: {username}, IP: {client_ip}')
-        return jsonify({'error': error_msg}), 400
+        return jsonify({
+            'error': error_msg,
+            'field': 'password',
+            'code': 'INVALID_STRENGTH'
+        }), 400
     
     # 检查用户名是否已存在
     if User.query.filter_by(username=username).first():
         log_security_event('重复用户名注册尝试', f'用户名: {username}')
-        return jsonify({'error': '用户名已存在，请选择其他用户名'}), 409
+        return jsonify({
+            'error': '该用户名已被使用，请选择其他用户名',
+            'field': 'username',
+            'code': 'ALREADY_EXISTS'
+        }), 409
     
     # 检查邮箱是否已存在
     if User.query.filter_by(email=email).first():
         log_security_event('重复邮箱注册尝试', f'邮箱: {email}')
-        return jsonify({'error': '邮箱已被注册，请使用其他邮箱'}), 409
+        return jsonify({
+            'error': '该邮箱已被注册，请使用其他邮箱或直接登录',
+            'field': 'email',
+            'code': 'ALREADY_EXISTS'
+        }), 409
     
     try:
         # 创建新用户
@@ -207,31 +255,67 @@ def api_update_profile():
     current_app.logger.debug(f'资料更新尝试 - 用户ID: {current_user.id}, 新用户名: {username}, 新邮箱: {email}, IP: {client_ip}')
     
     # 验证必填字段
-    if not username or not email:
-        current_app.logger.warning(f'更新资料失败：缺少必填字段 - 用户ID: {current_user.id}, IP: {client_ip}')
-        return jsonify({'error': '用户名和邮箱都是必填项'}), 400
+    if not username:
+        current_app.logger.warning(f'更新资料失败：缺少用户名 - 用户ID: {current_user.id}, IP: {client_ip}')
+        return jsonify({
+            'error': '请输入用户名',
+            'field': 'username',
+            'code': 'REQUIRED'
+        }), 400
+    if not email:
+        current_app.logger.warning(f'更新资料失败：缺少邮箱 - 用户ID: {current_user.id}, IP: {client_ip}')
+        return jsonify({
+            'error': '请输入邮箱地址',
+            'field': 'email',
+            'code': 'REQUIRED'
+        }), 400
     
-    # 验证用户名长度
-    if len(username) < 3 or len(username) > 20:
+    # 验证用户名长度和格式
+    if len(username) < 2 or len(username) > 20:
         current_app.logger.warning(f'更新资料失败：用户名长度无效 - 用户ID: {current_user.id}, 用户名: {username}, IP: {client_ip}')
-        return jsonify({'error': '用户名长度必须在3-20个字符之间'}), 400
+        return jsonify({
+            'error': '用户名长度必须在2-20个字符之间',
+            'field': 'username',
+            'code': 'INVALID_LENGTH'
+        }), 400
+    
+    # 验证用户名字符（允许中文、英文、数字、下划线）
+    if not re.match(r'^[\u4e00-\u9fa5a-zA-Z0-9_]+$', username):
+        current_app.logger.warning(f'更新资料失败：用户名包含无效字符 - 用户ID: {current_user.id}, 用户名: {username}, IP: {client_ip}')
+        return jsonify({
+            'error': '用户名只能包含中文、英文字母、数字和下划线',
+            'field': 'username',
+            'code': 'INVALID_CHARACTERS'
+        }), 400
     
     # 验证邮箱格式
     if not validate_email(email):
         current_app.logger.warning(f'更新资料失败：邮箱格式无效 - 用户ID: {current_user.id}, 邮箱: {email}, IP: {client_ip}')
-        return jsonify({'error': '请输入有效的邮箱地址'}), 400
+        return jsonify({
+            'error': '请输入有效的邮箱地址',
+            'field': 'email',
+            'code': 'INVALID_FORMAT'
+        }), 400
     
     # 检查用户名是否已被其他用户使用
     if username != current_user.username:
         if User.query.filter_by(username=username).first():
             current_app.logger.warning(f'更新资料失败：用户名已存在 - 用户ID: {current_user.id}, 用户名: {username}, IP: {client_ip}')
-            return jsonify({'error': '用户名已存在，请选择其他用户名'}), 409
+            return jsonify({
+                'error': '该用户名已被使用，请选择其他用户名',
+                'field': 'username',
+                'code': 'ALREADY_EXISTS'
+            }), 409
     
     # 检查邮箱是否已被其他用户使用
     if email != current_user.email:
         if User.query.filter_by(email=email).first():
-            current_app.logger.warning(f'更新资料失败：邮箱已被注册 - 用户ID: {current_user.id}, 邮箱: {email}, IP: {client_ip}')
-            return jsonify({'error': '邮箱已被注册，请使用其他邮箱'}), 409
+            current_app.logger.warning(f'更新资料失败：邮箱已存在 - 用户ID: {current_user.id}, 邮箱: {email}, IP: {client_ip}')
+            return jsonify({
+                'error': '该邮箱已被注册，请使用其他邮箱',
+                'field': 'email',
+                'code': 'ALREADY_EXISTS'
+            }), 409
     
     try:
         # 记录原始信息
@@ -325,4 +409,4 @@ def api_check_auth():
         return jsonify({
             'authenticated': False,
             'user': None
-        }), 200 
+        }), 200
