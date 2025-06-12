@@ -143,6 +143,37 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  flex: 1;
+}
+
+/* 消息输入框容器样式 */
+.message-input-container {
+  flex-shrink: 0;
+}
+
+/* 聊天室整体布局优化 */
+.chat-room-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chat-room-header {
+  flex-shrink: 0;
+}
+
+.chat-room-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 确保Card组件正确处理高度 */
+.h-full {
+  height: 100% !important;
 }
 
 /* 滚动到底部按钮样式 */

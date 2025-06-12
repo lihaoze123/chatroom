@@ -10,6 +10,7 @@ import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
 import PasswordPrompt from '../ui/PasswordPrompt';
+import { motion, AnimatePresence } from 'framer-motion';
 
 
 interface RoomListProps {
@@ -62,7 +63,11 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
     return (
       <Card className="h-full">
         <CardContent className="h-full flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className="h-8 w-8 border-b-2 border-primary rounded-full"
+          />
         </CardContent>
       </Card>
     );
@@ -71,20 +76,35 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
   return (
     <Card className="h-full flex flex-col">
       <CardHeader className="pb-3 px-4 lg:px-6">
-        <div className="flex items-center justify-between">
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="flex items-center justify-between"
+        >
           <CardTitle className="text-lg">聊天室</CardTitle>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowCreateModal(true)}
-            title="创建聊天室"
-            className="h-8 w-8 lg:h-10 lg:w-10"
+          <motion.div
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
           >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowCreateModal(true)}
+              title="创建聊天室"
+              className="h-8 w-8 lg:h-10 lg:w-10"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </motion.div>
+        </motion.div>
         
-        <div className="relative">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="relative"
+        >
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="text"
@@ -93,104 +113,180 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 h-9 lg:h-10"
           />
-        </div>
+        </motion.div>
       </CardHeader>
 
       <Separator />
 
       <CardContent className="flex-1 p-0">
         <ScrollArea className="h-full">
-          {filteredRooms.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground">
-              <div className="py-8">
-                {searchTerm ? '没有找到匹配的聊天室' : '暂无聊天室'}
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-1 p-2 lg:p-3">
-              {filteredRooms.map((room) => (
-                <Button
-                  key={room.id}
-                  variant={selectedRoomId === room.id ? "secondary" : "ghost"}
-                  className="w-full justify-start h-auto p-3 lg:p-4"
-                  onClick={() => {
-                    if (room.is_private) {
-                      setPendingRoom(room);
-                      setShowPasswordPrompt(true);
-                    } else {
-                      onRoomSelect(room);
-                    }
-                  }}
-                >
-                  <div className="flex items-center space-x-3 w-full min-w-0">
-                    <div className="flex-shrink-0">
-                      {room.is_private ? (
-                        <Lock className="h-4 w-4 text-amber-500" />
-                      ) : (
-                        <Hash className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0 text-left">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">
-                            {room.name}
-                          </p>
-                          {room.is_private && (
-                            <span className="text-xs bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full flex-shrink-0">
-                              私密
-                            </span>
+          <AnimatePresence mode="wait">
+            {filteredRooms.length === 0 ? (
+              <motion.div 
+                key="empty"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="p-4 text-center text-muted-foreground"
+              >
+                <div className="py-8">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                    className="text-4xl mb-4"
+                  >
+                    🔍
+                  </motion.div>
+                  {searchTerm ? '没有找到匹配的聊天室' : '暂无聊天室'}
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div 
+                key="rooms"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-1 p-2 lg:p-3"
+              >
+                <AnimatePresence>
+                  {filteredRooms.map((room, index) => (
+                    <motion.div
+                      key={room.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ 
+                        duration: 0.3,
+                        delay: index * 0.05,
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 30
+                      }}
+                      layout
+                    >
+                      <motion.div
+                        whileHover={{ scale: 1.02, y: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                      >
+                        <Button
+                          variant={selectedRoomId === room.id ? "secondary" : "ghost"}
+                          className="w-full justify-start h-auto p-3 lg:p-4 relative overflow-hidden"
+                          onClick={() => {
+                            if (room.is_private) {
+                              setPendingRoom(room);
+                              setShowPasswordPrompt(true);
+                            } else {
+                              onRoomSelect(room);
+                            }
+                          }}
+                        >
+                          {selectedRoomId === room.id && (
+                            <motion.div
+                              layoutId="selectedRoom"
+                              className="absolute inset-0 bg-secondary rounded-md"
+                              initial={false}
+                              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                            />
                           )}
-                        </div>
-                        <div className="flex items-center text-xs text-muted-foreground flex-shrink-0">
-                          <Users className="h-3 w-3 mr-1" />
-                          {room.member_count || 0}
-                        </div>
-                      </div>
-                      {room.description && (
-                        <p className="text-xs text-muted-foreground truncate mt-1">
-                          {room.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </Button>
-              ))}
-            </div>
-          )}
+                          
+                          <div className="flex items-center space-x-3 w-full min-w-0 relative z-10">
+                            <motion.div 
+                              className="flex-shrink-0"
+                              whileHover={{ rotate: 360 }}
+                              transition={{ duration: 0.5 }}
+                            >
+                              {room.is_private ? (
+                                <Lock className="h-4 w-4 text-amber-500" />
+                              ) : (
+                                <Hash className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </motion.div>
+                            <div className="flex-1 min-w-0 text-left">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <p className="text-sm font-medium truncate">
+                                    {room.name}
+                                  </p>
+                                  {room.is_private && (
+                                    <motion.span
+                                      initial={{ scale: 0 }}
+                                      animate={{ scale: 1 }}
+                                      transition={{ delay: 0.2 }}
+                                      className="text-xs bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full flex-shrink-0"
+                                    >
+                                      私密
+                                    </motion.span>
+                                  )}
+                                </div>
+                                <motion.div 
+                                  className="flex items-center text-xs text-muted-foreground flex-shrink-0"
+                                  whileHover={{ scale: 1.1 }}
+                                >
+                                  <Users className="h-3 w-3 mr-1" />
+                                  {room.member_count || 0}
+                                </motion.div>
+                              </div>
+                              {room.description && (
+                                <motion.p 
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  transition={{ delay: 0.1 }}
+                                  className="text-xs text-muted-foreground truncate mt-1"
+                                >
+                                  {room.description}
+                                </motion.p>
+                              )}
+                            </div>
+                          </div>
+                        </Button>
+                      </motion.div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </ScrollArea>
       </CardContent>
 
       {/* 创建聊天室模态框 */}
-      {showCreateModal && (
-        <CreateRoomModal
-          onClose={() => setShowCreateModal(false)}
-          onCreate={handleCreateRoom}
-        />
-      )}
+      <AnimatePresence>
+        {showCreateModal && (
+          <CreateRoomModal
+            onClose={() => setShowCreateModal(false)}
+            onCreate={handleCreateRoom}
+          />
+        )}
+      </AnimatePresence>
 
       {/* 密码提示框 */}
-      {showPasswordPrompt && pendingRoom && (
-        <PasswordPrompt
-          isOpen={showPasswordPrompt}
-          roomName={pendingRoom.name}
-          onClose={() => {
-            setShowPasswordPrompt(false);
-            setPendingRoom(null);
-          }}
-          onSubmit={async (password) => {
-            try {
-              await joinRoom(pendingRoom.id, password);
-              onRoomSelect(pendingRoom);
+      <AnimatePresence>
+        {showPasswordPrompt && pendingRoom && (
+          <PasswordPrompt
+            isOpen={showPasswordPrompt}
+            roomName={pendingRoom.name}
+            onClose={() => {
               setShowPasswordPrompt(false);
               setPendingRoom(null);
-            } catch (err) {
-              console.error('Password error:', err);
-              toast.error('密码错误或无法加入该房间');
-            }
-          }}
-        />
-      )}
+            }}
+            onSubmit={async (password) => {
+              try {
+                await joinRoom(pendingRoom.id, password);
+                onRoomSelect(pendingRoom);
+                setShowPasswordPrompt(false);
+                setPendingRoom(null);
+              } catch (err) {
+                console.error('Password error:', err);
+                toast.error('密码错误或无法加入该房间');
+              }
+            }}
+          />
+        )}
+      </AnimatePresence>
     </Card>
   );
 };
