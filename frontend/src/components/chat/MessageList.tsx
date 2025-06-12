@@ -1,96 +1,104 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Message } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import { ScrollArea } from '../ui/scroll-area';
+// 移除 ScrollArea 导入
+// import { ScrollArea } from '../ui/scroll-area';
 import { Avatar, AvatarFallback } from '../ui/avatar';
-import { Button } from '../ui/button';
 import { ChevronDown } from 'lucide-react';
+import { Button } from '../ui/button';
 
 interface MessageListProps {
   messages: Message[];
+  currentUserId: number;
   typingUsers: string[];
+  onUserClick?: (userId: number) => void;
 }
 
-const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
+// 定义组件ref类型
+export interface MessageListRef {
+  scrollToBottom: () => void;
+}
+
+const MessageList = React.forwardRef<MessageListRef, MessageListProps>((props, ref) => {
+  const { messages, currentUserId, typingUsers, onUserClick } = props;
   const { user } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const previousLengthRef = useRef(0);
-  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [isAtBottom, setIsAtBottom] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [prevMessagesLength, setPrevMessagesLength] = useState(0);
+  const [isScrolling, setIsScrolling] = useState(false);
 
   // 防御性检查：确保 messages 是数组
   const safeMessages = Array.isArray(messages) ? messages : [];
-  const safeTypingUsers = Array.isArray(typingUsers) ? typingUsers : [];
-
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    setUnreadCount(0);
-  }, []);
-
-  const checkScrollPosition = useCallback(() => {
+  
+  // 滚动到底部函数
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      setUnreadCount(0);
+      setIsAtBottom(true);
+    }
+  };
+  
+  // 暴露方法给父组件
+  React.useImperativeHandle(ref, () => ({
+    scrollToBottom
+  }));
+  
+  // 检查滚动位置
+  const checkScrollPosition = () => {
     const scrollArea = scrollAreaRef.current;
     if (scrollArea) {
-      const viewport = scrollArea.querySelector('[data-radix-scroll-area-viewport]');
-      if (viewport) {
-        const { scrollTop, scrollHeight, clientHeight } = viewport;
-        const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
-        setShowScrollButton(!isNearBottom);
-        
-        if (isNearBottom) {
-          setUnreadCount(0);
-        }
-      }
+      const { scrollHeight, scrollTop, clientHeight } = scrollArea;
+      // 如果滚动条在底部附近（考虑一点误差），则认为在底部
+      const isBottom = scrollHeight - scrollTop - clientHeight < 30;
+      setIsAtBottom(isBottom);
     }
-  }, []);
-
+  };
+  
   // 监听滚动事件
   useEffect(() => {
     const scrollArea = scrollAreaRef.current;
     if (scrollArea) {
-      const viewport = scrollArea.querySelector('[data-radix-scroll-area-viewport]');
-      if (viewport) {
-        viewport.addEventListener('scroll', checkScrollPosition);
-        return () => viewport.removeEventListener('scroll', checkScrollPosition);
-      }
-    }
-  }, [checkScrollPosition]);
-
-  // 当有新消息时，如果用户不在底部，增加未读计数
-  useEffect(() => {
-    if (safeMessages.length > previousLengthRef.current) {
-      const newMessages = safeMessages.slice(previousLengthRef.current);
-      const hasOwnMessage = newMessages.some(msg => msg.user_id === user?.id);
+      const handleScroll = () => {
+        if (!isScrolling) {
+          setIsScrolling(true);
+          checkScrollPosition();
+          setTimeout(() => setIsScrolling(false), 100);
+        }
+      };
       
-      if (hasOwnMessage) {
-        // 如果是用户自己发送的消息，自动滚动到底部
-        setTimeout(() => {
-          scrollToBottom();
-        }, 100);
-      } else if (showScrollButton) {
-        // 如果是其他人的消息且用户不在底部，增加未读计数
-        const newMessagesCount = newMessages.length;
-        setUnreadCount(prev => prev + newMessagesCount);
+      scrollArea.addEventListener('scroll', handleScroll);
+      return () => scrollArea.removeEventListener('scroll', handleScroll);
+    }
+  }, [isScrolling]);
+  
+  // 处理新消息和初始加载
+  useEffect(() => {
+    // 初始加载时滚动到底部
+    if (prevMessagesLength === 0 && safeMessages.length > 0) {
+      scrollToBottom();
+    }
+    // 有新消息时
+    else if (safeMessages.length > prevMessagesLength) {
+      // 检查最新消息是否是当前用户发送的
+      const latestMessage = safeMessages[safeMessages.length - 1];
+      const isOwnMessage = latestMessage && latestMessage.user_id === user?.id;
+      
+      // 如果是自己的消息或者已经在底部，则滚动到底部
+      if (isOwnMessage || isAtBottom) {
+        scrollToBottom();
+      } else {
+        // 否则增加未读消息计数
+        setUnreadCount(prev => prev + (safeMessages.length - prevMessagesLength));
       }
     }
     
-    previousLengthRef.current = safeMessages.length;
-  }, [safeMessages.length, showScrollButton, user?.id, scrollToBottom]);
-
-  // 初始加载时滚动到底部
-  useEffect(() => {
-    if (safeMessages.length > 0) {
-      // 延迟一点时间确保DOM已经渲染
-      const timer = setTimeout(() => {
-        scrollToBottom();
-        checkScrollPosition();
-      }, 150);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [safeMessages.length === 0 ? 0 : 1, scrollToBottom, checkScrollPosition]); // 只在首次加载消息时触发
+    setPrevMessagesLength(safeMessages.length);
+  }, [safeMessages.length, prevMessagesLength, isAtBottom, user?.id]);
 
   const formatTime = (dateString: string) => {
     try {
@@ -120,7 +128,11 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 message-list-container relative">
-      <ScrollArea ref={scrollAreaRef} className="flex-1 p-3 sm:p-4">
+      {/* 使用普通的 div 替换 ScrollArea 组件 */}
+      <div 
+        ref={scrollAreaRef} 
+        className="flex-1 p-3 sm:p-4 scrollable-content overflow-y-auto"
+      >
         {safeMessages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-muted-foreground">
             <div className="text-center px-4">
@@ -151,7 +163,10 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
                       {/* 头像 */}
                       {showAvatar && !isOwnMessage && (
                         <div className="flex-shrink-0 mr-2 sm:mr-3">
-                          <Avatar className="w-7 h-7 sm:w-8 sm:h-8">
+                          <Avatar 
+                            className="w-7 h-7 sm:w-8 sm:h-8 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+                            onClick={() => onUserClick && onUserClick(message.user_id)}
+                          >
                             <AvatarFallback className={`text-white text-xs sm:text-sm font-medium ${getAvatarColor(message.user_id)}`}>
                               {message.username.charAt(0).toUpperCase()}
                             </AvatarFallback>
@@ -202,23 +217,21 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
             })}
             
             {/* 正在输入指示器 */}
-            {safeTypingUsers.length > 0 && (
-              <div className="flex justify-start mb-2 w-full">
+            {typingUsers.map((username, index) => (
+              <div key={`${username}-${index}`} className="flex justify-start mb-2 w-full">
                 <div className="flex max-w-[85%] sm:max-w-[75%] md:max-w-[65%] flex-container-safe">
                   <div className="flex-shrink-0 mr-2 sm:mr-3">
-                    <Avatar className="w-7 h-7 sm:w-8 sm:h-8">
-                      <AvatarFallback className="bg-muted">
-                        <div className="flex space-x-1">
-                          <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce"></div>
-                          <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                          <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                        </div>
+                    <Avatar 
+                      className="w-7 h-7 sm:w-8 sm:h-8 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+                    >
+                      <AvatarFallback className={`text-white text-xs sm:text-sm font-medium ${getAvatarColor(username.charCodeAt(0))}`}>
+                        {username.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="text-xs text-muted-foreground mb-1">
-                      {safeTypingUsers.join(', ')} 正在输入...
+                      {username} 正在输入...
                     </div>
                     <div className="px-3 sm:px-4 py-2 bg-muted rounded-2xl rounded-bl-md message-bubble">
                       <div className="flex space-x-1">
@@ -230,35 +243,26 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
                   </div>
                 </div>
               </div>
-            )}
+            ))}
             
             <div ref={messagesEndRef} />
           </div>
         )}
-      </ScrollArea>
-
+      </div>
+      
       {/* 滚动到底部按钮 */}
-      {showScrollButton && (
-        <div className="scroll-to-bottom-btn">
-          <Button
-            onClick={scrollToBottom}
-            size="sm"
-            className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground border-0 h-10 w-auto px-3"
-            title="滚动到底部"
-          >
-            <ChevronDown className="h-4 w-4" />
-            {unreadCount > 0 ? (
-              <span className="ml-1 unread-count text-xs">
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </span>
-            ) : (
-              <span className="ml-1 text-xs hidden sm:inline">底部</span>
-            )}
-          </Button>
-        </div>
+      {!isAtBottom && unreadCount > 0 && (
+        <Button
+          onClick={scrollToBottom}
+          className="scroll-to-bottom-btn absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center space-x-1 px-3 py-1.5 rounded-full shadow-md bg-primary text-primary-foreground hover:bg-primary/90 transition-all"
+          size="sm"
+        >
+          <ChevronDown className="h-4 w-4" />
+          <span>{unreadCount} 条新消息</span>
+        </Button>
       )}
     </div>
   );
-};
+});
 
-export default MessageList; 
+export default MessageList;

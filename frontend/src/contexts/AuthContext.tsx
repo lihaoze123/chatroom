@@ -18,10 +18,12 @@ type AuthAction =
   | { type: 'SET_AUTHENTICATED'; payload: boolean };
 
 const authReducer = (state: AuthState, action: AuthAction): AuthState => {
+  console.log('AuthContext authReducer - action:', action);
   switch (action.type) {
     case 'SET_LOADING':
       return { ...state, loading: action.payload };
     case 'SET_USER':
+      console.log('AuthContext authReducer - SET_USER - 新的用户信息:', action.payload);
       return {
         ...state,
         user: action.payload,
@@ -137,8 +139,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const updateUser = (user: User) => {
-    dispatch({ type: 'SET_USER', payload: user });
+  const updateUser = (updatedUserInfo: Partial<User>) => {
+    console.log('AuthContext updateUser - 传入的更新信息:', updatedUserInfo);
+    if (!state.user) {
+      console.warn('AuthContext updateUser - state.user is null, cannot update.');
+      return;
+    }
+    dispatch({ 
+      type: 'SET_USER', 
+      payload: { ...state.user, ...updatedUserInfo } 
+    });
   };
 
   const value: AuthContextType = {

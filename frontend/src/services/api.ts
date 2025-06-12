@@ -108,11 +108,16 @@ export const authAPI = {
   },
 
   updateProfile: async (data: FormData) => {
-    const response = await api.post('/auth/profile/edit', data, {
+    const response = await api.post('/api/auth/profile/edit', data, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
+    return response.data;
+  },
+
+  getUserProfile: async (userId: number) => {
+    const response = await api.get(`/api/auth/user/${userId}`);
     return response.data;
   },
 };
@@ -156,4 +161,4 @@ export const chatAPI = {
   },
 };
 
-export default api; 
+export default api;

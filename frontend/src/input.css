@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 滚动到底部按钮样式 */
+.scroll-to-bottom-btn {
+  z-index: 10;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -93,10 +104,21 @@
 [data-radix-scroll-area-scrollbar] {
   display: flex !important;
   user-select: none;
-  touch-action: none;
+  touch-action: auto;
   padding: 2px;
   background: transparent;
   transition: background-color 150ms ease;
+}
+
+/* 确保滚动区域支持鼠标滑轮滚动 */
+[data-radix-scroll-area-viewport] {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+  overflow-y: auto !important;
+  height: 100% !important;
+  width: 100% !important;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }
 
 [data-radix-scroll-area-scrollbar]:hover {
@@ -143,32 +165,11 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  height: 100%;
+  position: relative;
 }
 
-/* 滚动到底部按钮样式 */
-.scroll-to-bottom-btn {
-  position: absolute;
-  bottom: 1rem;
-  right: 1rem;
-  z-index: 10;
-  border-radius: 9999px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  transition: all 0.2s ease-in-out;
-  animation: slideUp 0.3s ease-out;
-}
 
-.scroll-to-bottom-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
-/* 移动端滚动按钮优化 */
-@media (max-width: 768px) {
-  .scroll-to-bottom-btn {
-    bottom: 0.75rem;
-    right: 0.75rem;
-  }
-}
 
 @keyframes slideUp {
   from {
@@ -211,6 +212,47 @@
     margin: 0.5rem;
     border-radius: 0.75rem;
   }
+}
+
+/* 固定布局优化 */
+.fixed-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.fixed-header {
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+/* 全局滚动区域样式 */
+.scrollable-content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* 优化移动端滚动区域 */
+@media (max-width: 768px) {
+  .scrollable-content {
+    -webkit-overflow-scrolling: touch; /* 在iOS上提供平滑滚动 */
+    scroll-behavior: smooth;
+    overscroll-behavior: contain; /* 防止过度滚动 */
+  }
+  
+  /* 移除可能导致问题的嵌套滚动容器样式 */
+  .overflow-y-auto {
+    height: 100%;
+    max-height: 100%;
+  }
+}
+
+.fixed-footer {
+  flex-shrink: 0;
+  z-index: 10;
 }
 
 /* 移动端侧边栏动画 */
@@ -291,4 +333,4 @@ body {
     width: 1.75rem;
     height: 1.75rem;
   }
-} 
+}

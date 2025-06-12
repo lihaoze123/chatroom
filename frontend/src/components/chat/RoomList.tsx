@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { ChatRoom } from '../../types';
 import { chatAPI } from '../../services/api';
 import { useChat } from '../../contexts/ChatContext';
-import { Hash, Users, Plus, Search } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { Hash, Users, Plus, Search, User, LogOut } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
+import ProfilePage from '../profile/ProfilePage';
 
 interface RoomListProps {
   onRoomSelect: (room: ChatRoom) => void;
@@ -20,7 +22,9 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const { createRoom } = useChat();
+  const { logout } = useAuth();
 
   useEffect(() => {
     loadRooms();
@@ -52,6 +56,22 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
     }
   };
 
+  const handleShowProfile = () => {
+    setShowProfile(true);
+  };
+
+  const handleBackFromProfile = () => {
+    setShowProfile(false);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
   if (loading) {
     return (
       <Card className="h-full">
@@ -60,6 +80,11 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
         </CardContent>
       </Card>
     );
+  }
+
+  // 如果显示个人信息页面
+  if (showProfile) {
+    return <ProfilePage onBack={handleBackFromProfile} />;
   }
 
   return (
@@ -136,6 +161,28 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
           )}
         </ScrollArea>
       </CardContent>
+
+      {/* 底部按钮区域 */}
+      <div className="p-3 border-t bg-background">
+        <div className="space-y-2">
+          <Button
+            variant="outline"
+            className="w-full justify-start h-10"
+            onClick={handleShowProfile}
+          >
+            <User className="h-4 w-4 mr-2" />
+            个人信息
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full justify-start h-10 text-destructive hover:text-destructive"
+            onClick={handleLogout}
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            退出登录
+          </Button>
+        </div>
+      </div>
 
       {/* 创建聊天室模态框 */}
       {showCreateModal && (
@@ -237,4 +284,4 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ onClose, onCreate }) 
   );
 };
 
-export default RoomList; 
+export default RoomList;

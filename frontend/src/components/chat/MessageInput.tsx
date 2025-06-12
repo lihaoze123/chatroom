@@ -6,9 +6,10 @@ interface MessageInputProps {
   onSendMessage: (message: string) => void;
   onTyping: (isTyping: boolean) => void;
   disabled?: boolean;
+  onMessageSent?: () => void;
 }
 
-const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, disabled }) => {
+const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, disabled, onMessageSent }) => {
   const [message, setMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showEmojiPanel, setShowEmojiPanel] = useState(false);
@@ -31,6 +32,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, di
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setMessage(value);
+    adjustTextareaHeight();
 
     // 处理输入状态
     if (value.trim() && !isTyping) {
@@ -71,6 +73,11 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, di
 
       // 关闭表情面板
       setShowEmojiPanel(false);
+      
+      // 触发消息发送后的回调，用于滚动到底部
+      if (onMessageSent) {
+        onMessageSent();
+      }
     }
   };
 
@@ -111,7 +118,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, di
   const emojis = ['😀', '😂', '😍', '🤔', '👍', '👎', '❤️', '🎉', '😢', '😡', '🔥', '💯', '🎯', '⚡', '🌟', '💪'];
 
   return (
-    <div className="border-t bg-background p-3 sm:p-4 message-input-container mobile-safe-area">
+    <div className="bg-background p-3 sm:p-4 message-input-container mobile-safe-area">
       <form onSubmit={handleSubmit} className="flex items-end space-x-2 sm:space-x-3">
         {/* 表情按钮 */}
         <div className="relative emoji-panel-container">

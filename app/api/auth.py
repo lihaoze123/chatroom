@@ -341,6 +341,43 @@ def api_update_profile():
         current_app.logger.error(f'更新资料失败：数据库错误 - 用户ID: {current_user.id}, IP: {client_ip}, 错误: {str(e)}')
         return jsonify({'error': '更新失败，请稍后重试'}), 500
 
+@bp.route('/auth/profile/edit', methods=['POST'])
+@login_required
+def api_update_profile_form():
+    """更新用户资料API（支持FormData格式）"""
+    client_ip = get_client_ip()
+    current_app.logger.info(f'更新用户资料请求（FormData） - 用户ID: {current_user.id}, IP: {client_ip}')
+    
+    # 获取FormData数据
+    gender = request.form.get('gender', '').strip()
+    bio = request.form.get('bio', '').strip()
+    occupation = request.form.get('occupation', '').strip()
+    
+    current_app.logger.debug(f'资料更新尝试 - 用户ID: {current_user.id}, 性别: {gender}, 个性签名: {bio}, 兴趣爱好: {occupation}, IP: {client_ip}')
+    
+    try:
+        # 更新用户信息
+        if gender:
+            current_user.gender = gender
+        if bio:
+            current_user.bio = bio
+        if occupation:
+            current_user.occupation = occupation
+            
+        db.session.commit()
+        
+        log_user_action('个人信息更新', current_user.id, f'性别: {gender}, 个性签名: {bio}, 兴趣爱好: {occupation}')
+        
+        return jsonify({
+            'message': '个人信息更新成功！',
+            'user': current_user.to_dict()
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'更新个人信息失败：数据库错误 - 用户ID: {current_user.id}, IP: {client_ip}, 错误: {str(e)}')
+        return jsonify({'error': '更新失败，请稍后重试'}), 500
+
 @bp.route('/auth/change-password', methods=['PUT'])
 @login_required
 def api_change_password():
@@ -410,3 +447,36 @@ def api_check_auth():
             'authenticated': False,
             'user': None
         }), 200
+
+@bp.route('/auth/user/<int:user_id>', methods=['GET'])
+@login_required
+def api_get_user_profile(user_id):
+    """获取用户信息API"""
+    client_ip = get_client_ip()
+    current_app.logger.info(f'获取用户信息请求 - 用户ID: {user_id}, 请求者: {current_user.id}, IP: {client_ip}')
+    
+    try:
+        # 查找目标用户
+        target_user = User.query.get(user_id)
+        if not target_user:
+            current_app.logger.warning(f'获取用户信息失败：用户不存在 - 用户ID: {user_id}, IP: {client_ip}')
+            return jsonify({'error': '用户不存在'}), 404
+        
+        # 返回用户信息（不包含敏感信息）
+        user_data = {
+            'id': target_user.id,
+            'username': target_user.username,
+            'email': target_user.email,
+            'gender': target_user.gender,
+            'bio': target_user.bio,
+            'occupation': target_user.occupation
+        }
+        
+        current_app.logger.debug(f'获取用户信息成功 - 用户ID: {user_id}, 请求者: {current_user.id}, IP: {client_ip}')
+        return jsonify({
+            'user': user_data
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f'获取用户信息失败：服务器错误 - 用户ID: {user_id}, 请求者: {current_user.id}, IP: {client_ip}, 错误: {str(e)}')
+        return jsonify({'error': '获取用户信息失败，请稍后重试'}), 500

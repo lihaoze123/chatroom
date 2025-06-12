@@ -14,6 +14,9 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     avatar_url = db.Column(db.String(255), default='')
+    gender = db.Column(db.String(10), default='')
+    bio = db.Column(db.Text, default='')
+    occupation = db.Column(db.String(100), default='')
     is_online = db.Column(db.Boolean, default=False)
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -49,6 +52,9 @@ class User(UserMixin, db.Model):
             'username': self.username,
             'email': self.email,
             'avatar_url': self.avatar_url,
+            'gender': self.gender,
+            'bio': self.bio,
+            'occupation': self.occupation,
             'is_online': self.is_online,
             'last_seen': self.last_seen.isoformat() if self.last_seen else None,
             'created_at': self.created_at.isoformat() if self.created_at else None
@@ -162,4 +168,4 @@ class Message(db.Model):
 @login_manager.user_loader
 def load_user(user_id):
     """Flask-Login用户加载器"""
-    return User.query.get(int(user_id)) 
+    return User.query.get(int(user_id))
