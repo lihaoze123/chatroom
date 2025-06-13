@@ -4,12 +4,14 @@ import { useAuth } from '../../contexts/AuthContext';
 import { ChatRoom as ChatRoomType } from '../../types';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
-import { Hash, Users, Settings, LogOut, X } from 'lucide-react';
+import { Hash, Users, Settings, LogOut, X, MessageCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '../ui/card';
 import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';
 import { ScrollArea } from '../ui/scroll-area';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Badge } from '../ui/badge';
+import { SimpleTooltip } from '../ui/tooltip';
 
 interface ChatRoomProps {
   room: ChatRoomType;
@@ -70,6 +72,8 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeaveRoom }) => {
     setShowUserList(!showUserList);
   };
 
+
+
   if (loading) {
     return (
       <Card className="h-full">
@@ -83,7 +87,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeaveRoom }) => {
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              className="h-8 w-8 border-b-2 border-primary rounded-full mx-auto mb-4"
+              className="h-10 w-10 border-b-2 border-primary rounded-full mx-auto mb-4"
             />
             <motion.p 
               initial={{ opacity: 0, y: 10 }}
@@ -100,9 +104,9 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeaveRoom }) => {
   }
 
   return (
-    <Card className="h-full flex flex-col overflow-hidden">
+    <Card className="h-full flex flex-col overflow-hidden border-none shadow-md">
       {/* 聊天室头部 - 桌面端显示 */}
-      <CardHeader className="pb-3 hidden lg:block flex-shrink-0">
+      <CardHeader className="pb-3 hidden lg:block flex-shrink-0 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -111,12 +115,15 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeaveRoom }) => {
         >
           <div className="flex items-center space-x-3 min-w-0 flex-1">
             <div className="flex items-center space-x-2 min-w-0">
-              <motion.div
-                whileHover={{ rotate: 360 }}
-                transition={{ duration: 0.5 }}
-              >
-                <Hash className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              </motion.div>
+              <SimpleTooltip content="聊天室频道">
+                <motion.div
+                  whileHover={{ rotate: 360, scale: 1.2 }}
+                  transition={{ duration: 0.5 }}
+                  className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center"
+                >
+                  <Hash className="h-4 w-4 text-primary flex-shrink-0" />
+                </motion.div>
+              </SimpleTooltip>
               <h1 className="text-lg font-semibold truncate">{room.name}</h1>
             </div>
             {room.description && (
@@ -151,64 +158,75 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeaveRoom }) => {
             </div>
 
             {/* 在线用户数 */}
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleUserList}
-                title="查看在线用户"
+            <SimpleTooltip content="查看在线用户">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
-                <Users className="h-4 w-4 mr-1" />
-                <motion.span
-                  key={onlineUsers.length}
-                  initial={{ scale: 1.2 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 300 }}
+                <Button
+                  variant={showUserList ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={toggleUserList}
+                  className="relative"
                 >
-                  {onlineUsers.length}
-                </motion.span>
-              </Button>
-            </motion.div>
+                  <Users className="h-4 w-4 mr-1" />
+                  <motion.span
+                    key={onlineUsers.length}
+                    initial={{ scale: 1.2 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
+                    {onlineUsers.length}
+                  </motion.span>
+                  {showUserList && (
+                    <motion.span 
+                      className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-primary"
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ repeat: Infinity, duration: 1.5 }}
+                    />
+                  )}
+                </Button>
+              </motion.div>
+            </SimpleTooltip>
 
             {/* 设置按钮 - 桌面端显示 */}
-            <motion.div
-              whileHover={{ scale: 1.1, rotate: 90 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button
-                variant="ghost"
-                size="icon"
-                title="设置"
-                className="hidden md:inline-flex"
+            <SimpleTooltip content="聊天室设置">
+              <motion.div
+                whileHover={{ scale: 1.1, rotate: 90 }}
+                whileTap={{ scale: 0.95 }}
               >
-                <Settings className="h-4 w-4" />
-              </Button>
-            </motion.div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="hidden md:inline-flex"
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </motion.div>
+            </SimpleTooltip>
 
             {/* 退出登录 */}
-            <motion.div
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleLeaveRoom}
-                title="退出聊天室"
-                className="text-muted-foreground hover:text-destructive"
+            <SimpleTooltip content="退出聊天室">
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
               >
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </motion.div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleLeaveRoom}
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </motion.div>
+            </SimpleTooltip>
           </div>
         </motion.div>
       </CardHeader>
 
       {/* 移动端简化头部 */}
-      <CardHeader className="pb-3 lg:hidden flex-shrink-0">
+      <CardHeader className="pb-3 lg:hidden flex-shrink-0 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -227,9 +245,12 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeaveRoom }) => {
               }}
               className="w-2 h-2 rounded-full flex-shrink-0"
             />
-            <span className="text-xs text-muted-foreground flex-shrink-0">
-              {connected ? '已连接' : '连接中...'}
-            </span>
+            <div className="flex flex-col min-w-0">
+              <h2 className="text-sm font-medium truncate">{room.name}</h2>
+              <span className="text-xs text-muted-foreground">
+                {connected ? '已连接' : '连接中...'}
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center space-x-1">
@@ -239,10 +260,10 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeaveRoom }) => {
               whileTap={{ scale: 0.95 }}
             >
               <Button
-                variant="ghost"
+                variant={showUserList ? "secondary" : "ghost"}
                 size="sm"
                 onClick={toggleUserList}
-                title="查看在线用户"
+                className="relative"
               >
                 <Users className="h-4 w-4 mr-1" />
                 <motion.span
@@ -253,6 +274,13 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeaveRoom }) => {
                 >
                   {onlineUsers.length}
                 </motion.span>
+                {showUserList && (
+                  <motion.span 
+                    className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-primary"
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ repeat: Infinity, duration: 1.5 }}
+                  />
+                )}
               </Button>
             </motion.div>
 
@@ -265,7 +293,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeaveRoom }) => {
                 variant="ghost"
                 size="icon"
                 onClick={handleLeaveRoom}
-                title="退出聊天室"
                 className="text-muted-foreground hover:text-destructive"
               >
                 <LogOut className="h-4 w-4" />
@@ -280,11 +307,16 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeaveRoom }) => {
       {/* 主要内容区域 */}
       <CardContent className="flex-1 p-0 flex relative overflow-hidden min-h-0">
         {/* 消息区域 */}
-        <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
-          <MessageList 
-            messages={messages} 
-            typingUsers={typingUsers}
-          />
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden relative">
+          <div className="flex-1 overflow-hidden relative">
+            <MessageList 
+              messages={messages} 
+              typingUsers={typingUsers}
+            />
+            
+            {/* 滚动到底部按钮 - 暂时隐藏，等待MessageList支持滚动检测 */}
+          </div>
+          
           <MessageInput 
             onSendMessage={handleSendMessage}
             onTyping={handleTyping}
@@ -316,10 +348,13 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeaveRoom }) => {
                   stiffness: 300,
                   damping: 30
                 }}
-                className="fixed right-0 top-0 bottom-0 w-64 bg-background border-l z-50 lg:relative lg:w-56 lg:z-auto flex flex-col overflow-hidden"
+                className="fixed right-0 top-0 bottom-0 w-72 bg-background border-l z-50 lg:relative lg:w-64 lg:z-auto flex flex-col overflow-hidden"
               >
                 <div className="flex items-center justify-between p-4 border-b lg:hidden flex-shrink-0">
-                  <h3 className="font-semibold">在线用户</h3>
+                  <div className="flex items-center space-x-2">
+                    <MessageCircle className="h-4 w-4 text-primary" />
+                    <h3 className="font-semibold">在线用户</h3>
+                  </div>
                   <motion.div
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
@@ -335,11 +370,17 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeaveRoom }) => {
                   </motion.div>
                 </div>
 
-                <div className="hidden lg:block p-4 border-b flex-shrink-0">
-                  <h3 className="font-semibold text-sm">在线用户 ({onlineUsers.length})</h3>
+                <div className="hidden lg:flex items-center justify-between p-4 border-b flex-shrink-0">
+                  <div className="flex items-center space-x-2">
+                    <MessageCircle className="h-4 w-4 text-primary" />
+                    <h3 className="font-semibold text-sm">在线用户</h3>
+                  </div>
+                  <Badge variant="outline" className="text-xs">
+                    {onlineUsers.length}
+                  </Badge>
                 </div>
 
-                                 <ScrollArea className="flex-1">
+                <ScrollArea className="flex-1">
                   <div className="p-2 space-y-1">
                     {onlineUsers.map((username, index) => (
                       <motion.div
@@ -364,6 +405,9 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeaveRoom }) => {
                             <span className="text-xs text-muted-foreground ml-1">(你)</span>
                           )}
                         </span>
+                        {username === user?.username && (
+                          <Badge variant="secondary" className="text-xs">你</Badge>
+                        )}
                       </motion.div>
                     ))}
                   </div>
