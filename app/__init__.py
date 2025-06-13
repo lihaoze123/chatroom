@@ -185,6 +185,12 @@ def create_app(config_class):
     
 
     
+    # 确保instance文件夹存在（用于存储数据库文件）
+    instance_dir = os.path.join(app.config.get('BASE_PATH', os.path.dirname(os.path.abspath(__file__))), 'instance')
+    if not os.path.exists(instance_dir):
+        os.makedirs(instance_dir)
+        app.logger.info(f'创建instance文件夹: {instance_dir}')
+    
     # 创建数据库表
     with app.app_context():
         db.create_all()
