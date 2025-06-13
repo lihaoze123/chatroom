@@ -11,13 +11,31 @@ from app.utils import get_client_ip, log_user_action
 
 # 允许的文件扩展名
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-# 最大文件大小 (5MB)
-MAX_FILE_SIZE = 5 * 1024 * 1024
+ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'}
+ALLOWED_FILE_EXTENSIONS = {'pdf', 'doc', 'docx', 'txt', 'zip', 'rar', 'mp3', 'mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm', 'ppt', 'pptx', 'xls', 'xlsx', 'csv', 'json', 'xml', 'html', 'css', 'js', 'py', 'java', 'cpp', 'c', 'h', 'php', 'rb', 'go', 'rs', 'swift', 'kt', 'scala', 'sql', 'md', 'rtf', 'odt', 'ods', 'odp', '7z', 'tar', 'gz', 'bz2', 'xz', 'iso', 'dmg', 'exe', 'msi', 'deb', 'rpm', 'apk', 'ipa'}
+ALL_ALLOWED_EXTENSIONS = ALLOWED_IMAGE_EXTENSIONS | ALLOWED_FILE_EXTENSIONS
+
+# 最大文件大小
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB for avatars
+MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB for images
+MAX_CHAT_FILE_SIZE = 50 * 1024 * 1024   # 50MB for files
 
 def allowed_file(filename):
     """检查文件扩展名是否允许"""
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def allowed_chat_file(filename, file_type='image'):
+    """检查聊天文件扩展名是否允许"""
+    if '.' not in filename:
+        return False
+    
+    ext = filename.rsplit('.', 1)[1].lower()
+    if file_type == 'image':
+        return ext in ALLOWED_IMAGE_EXTENSIONS
+    else:
+        # 允许所有文件类型
+        return True
 
 @bp.route('/upload/avatar', methods=['POST'])
 @login_required
@@ -96,4 +114,70 @@ def upload_avatar():
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f'头像上传失败：服务器错误 - 用户ID: {current_user.id}, IP: {client_ip}, 错误: {str(e)}')
+        return jsonify({'error': '上传失败，请稍后重试'}), 500
+
+@bp.route('/upload/chat-file', methods=['POST'])
+@login_required
+def upload_chat_file():
+    """上传聊天文件API"""
+    client_ip = get_client_ip()
+    current_app.logger.info(f'聊天文件上传请求 - 用户ID: {current_user.id}, IP: {client_ip}')
+    
+    # 检查是否有文件
+    if 'file' not in request.files:
+        return jsonify({'error': '请选择要上传的文件'}), 400
+    
+    file = request.files['file']
+    file_type = request.form.get('type', 'file')  # 'image' or 'file'
+    
+    # 检查文件名
+    if file.filename == '':
+        return jsonify({'error': '请选择要上传的文件'}), 400
+    
+    # 检查文件类型
+    if not allowed_chat_file(file.filename, file_type):
+        if file_type == 'image':
+            return jsonify({'error': '只支持 PNG、JPG、JPEG、GIF、WEBP、BMP 格式的图片'}), 400
+        else:
+            # 现在允许所有文件类型，这个分支理论上不会执行
+            return jsonify({'error': '文件格式验证失败'}), 400
+    
+    # 检查文件大小
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)
+    
+    max_size = MAX_IMAGE_SIZE if file_type == 'image' else MAX_CHAT_FILE_SIZE
+    if file_size > max_size:
+        size_limit = '10MB' if file_type == 'image' else '50MB'
+        return jsonify({'error': f'文件大小不能超过{size_limit}'}), 400
+    
+    try:
+        # 生成唯一文件名
+        file_extension = file.filename.rsplit('.', 1)[1].lower()
+        unique_filename = f"{uuid.uuid4().hex}.{file_extension}"
+        
+        # 确保上传目录存在
+        upload_dir = os.path.join(current_app.root_path, '..', 'uploads', 'chat-files')
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # 保存文件
+        file_path = os.path.join(upload_dir, unique_filename)
+        file.save(file_path)
+        
+        # 生成访问URL
+        file_url = f"/uploads/chat-files/{unique_filename}"
+        
+        current_app.logger.info(f'聊天文件上传成功 - 用户ID: {current_user.id}, 文件: {unique_filename}, IP: {client_ip}')
+        
+        return jsonify({
+            'message': '文件上传成功！',
+            'file_url': file_url,
+            'file_name': file.filename,
+            'file_size': file_size,
+            'file_type': file_type
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f'聊天文件上传失败：服务器错误 - 用户ID: {current_user.id}, IP: {client_ip}, 错误: {str(e)}')
         return jsonify({'error': '上传失败，请稍后重试'}), 500

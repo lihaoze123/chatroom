@@ -18,7 +18,7 @@ interface ChatState {
 interface ChatContextType extends ChatState {
   joinRoom: (roomId: number, password?: string) => Promise<void>;
   leaveRoom: (roomId: number) => Promise<void>;
-  sendMessage: (message: string) => void;
+  sendMessage: (message: string, messageType?: string, fileInfo?: any) => void;
   loadMessages: (roomId: number) => Promise<void>;
   createRoom: (name: string, description?: string, isPrivate?: boolean, password?: string) => Promise<ChatRoom | null>;
   setTyping: (isTyping: boolean) => void;
@@ -263,10 +263,17 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     }
   }, []);
 
-  const sendMessage = useCallback((message: string): void => {
-    if (!currentRoomRef.current || !message.trim()) return;
+  const sendMessage = useCallback((message: string, messageType?: string, fileInfo?: any): void => {
+    if (!currentRoomRef.current) return;
     
-    socketService.sendMessage(currentRoomRef.current.id, message.trim());
+    // 对于文件消息，允许空的message内容
+    if (messageType === 'file' || messageType === 'image') {
+      socketService.sendMessage(currentRoomRef.current.id, message || '', messageType, fileInfo);
+    } else {
+      // 文本消息需要有内容
+      if (!message.trim()) return;
+      socketService.sendMessage(currentRoomRef.current.id, message.trim(), messageType);
+    }
   }, []);
 
   const createRoom = useCallback(async (name: string, description?: string, isPrivate?: boolean, password?: string): Promise<ChatRoom | null> => {

@@ -138,9 +138,18 @@ def handle_send_message(data):
     
     room_id = data.get('room_id')
     content = data.get('content', '').strip()
+    message_type = data.get('message_type', 'text')
+    file_url = data.get('file_url', '')
+    file_name = data.get('file_name', '')
+    file_size = data.get('file_size', 0)
     
-    if not room_id or not content:
-        emit('error', {'message': '房间ID和消息内容不能为空'})
+    if not room_id:
+        emit('error', {'message': '房间ID不能为空'})
+        return
+    
+    # 对于文件消息，允许空内容；对于文本消息，需要有内容
+    if message_type == 'text' and not content:
+        emit('error', {'message': '消息内容不能为空'})
         return
     
     room = Room.query.get(room_id)
@@ -158,10 +167,21 @@ def handle_send_message(data):
         return
     
     try:
+        # 对于文件消息，将文件信息存储为JSON
+        if message_type in ['file', 'image'] and file_url:
+            import json
+            file_info = {
+                'url': file_url,
+                'name': file_name,
+                'size': file_size,
+                'description': content  # 用户输入的描述文字
+            }
+            content = json.dumps(file_info, ensure_ascii=False)
+        
         # 创建消息
         message = Message(
             content=content,
-            message_type='text',
+            message_type=message_type,
             user_id=current_user.id,
             room_id=room_id
         )

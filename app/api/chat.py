@@ -299,12 +299,20 @@ def api_send_message(room_id):
     
     content = data.get('content', '').strip()
     message_type = data.get('message_type', 'text')
+    file_url = data.get('file_url', '')
+    file_name = data.get('file_name', '')
+    file_size = data.get('file_size', 0)
     
-    if not content:
-        return jsonify({'error': '消息内容不能为空'}), 400
-    
-    if len(content) > 1000:
-        return jsonify({'error': '消息内容不能超过1000个字符'}), 400
+    # 验证消息内容
+    if message_type == 'text':
+        if not content:
+            return jsonify({'error': '消息内容不能为空'}), 400
+        if len(content) > 1000:
+            return jsonify({'error': '消息内容不能超过1000个字符'}), 400
+    elif message_type in ['image', 'file']:
+        if not file_url:
+            return jsonify({'error': '文件URL不能为空'}), 400
+        # 对于文件消息，content 可以是文件描述或为空
     
     try:
         # 创建消息
@@ -314,6 +322,18 @@ def api_send_message(room_id):
             user_id=current_user.id,
             room_id=room_id
         )
+        
+        # 如果是文件消息，将文件信息存储在content中（JSON格式）
+        if message_type in ['image', 'file']:
+            import json
+            file_info = {
+                'file_url': file_url,
+                'file_name': file_name,
+                'file_size': file_size,
+                'description': content  # 用户输入的描述
+            }
+            message.content = json.dumps(file_info, ensure_ascii=False)
+        
         db.session.add(message)
         db.session.commit()
         
@@ -420,4 +440,4 @@ def api_get_room_members(room_id):
         }), 200
         
     except Exception as e:
-        return jsonify({'error': '获取房间成员失败'}), 500 
+        return jsonify({'error': '获取房间成员失败'}), 500

@@ -187,6 +187,21 @@ export const chatAPI = {
     });
     return response.data.messages || [];
   },
+
+  // 添加文件上传方法
+  uploadChatFile: async (file: File, type: 'image' | 'file'): Promise<{file_url: string, file_name: string, file_size: number, file_type: string}> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', type);
+    
+    const response = await api.post('/api/upload/chat-file', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    return response.data;
+  }
 };
 
 export default api;

@@ -46,8 +46,8 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeaveRoom }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, [showUserList]);
 
-  const handleSendMessage = (message: string) => {
-    sendMessage(message);
+  const handleSendMessage = (message: string, messageType?: string, fileInfo?: any) => {
+    sendMessage(message, messageType, fileInfo);
   };
 
   const handleTyping = (isTyping: boolean) => {

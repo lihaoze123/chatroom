@@ -83,13 +83,25 @@ class SocketService {
   }
 
   // 消息相关事件
-  sendMessage(roomId: number, message: string) {
+  sendMessage(roomId: number, message: string, messageType?: string, fileInfo?: any) {
     if (this.socket) {
-      console.log('Sending message to room:', roomId, 'message:', message);
-      this.socket.emit('send_message', {
+      console.log('Sending message to room:', roomId, 'message:', message, 'type:', messageType);
+      const messageData: any = {
         room_id: roomId,
         content: message,
-      });
+      };
+      
+      if (messageType) {
+        messageData.message_type = messageType;
+      }
+      
+      if (fileInfo) {
+        messageData.file_url = fileInfo.url;
+        messageData.file_name = fileInfo.name;
+        messageData.file_size = fileInfo.size;
+      }
+      
+      this.socket.emit('send_message', messageData);
     } else {
       console.error('Socket not connected when trying to send message');
     }
