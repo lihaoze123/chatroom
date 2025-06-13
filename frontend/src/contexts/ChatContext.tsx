@@ -40,7 +40,8 @@ type ChatAction =
   | { type: 'REMOVE_ONLINE_USER'; payload: string }
   | { type: 'SET_TYPING_USERS'; payload: string[] }
   | { type: 'ADD_TYPING_USER'; payload: string }
-  | { type: 'REMOVE_TYPING_USER'; payload: string };
+  | { type: 'REMOVE_TYPING_USER'; payload: string }
+  | { type: 'UPDATE_USER_AVATAR'; payload: { user_id: number; avatar_url: string } };
 
 const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
   switch (action.type) {
@@ -83,6 +84,15 @@ const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
       return {
         ...state,
         typingUsers: state.typingUsers.filter(user => user !== action.payload),
+      };
+    case 'UPDATE_USER_AVATAR':
+      return {
+        ...state,
+        messages: state.messages.map(message => 
+          message.user_id === action.payload.user_id 
+            ? { ...message, avatar_url: action.payload.avatar_url }
+            : message
+        ),
       };
     default:
       return state;
@@ -176,6 +186,17 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     socketService.onOnlineUsersUpdate((data) => {
       const onlineUsernames = data.online_users.map(user => user.username);
       dispatch({ type: 'SET_ONLINE_USERS', payload: onlineUsernames });
+    });
+
+    // 用户头像更新
+    socketService.onUserAvatarUpdated((data) => {
+      dispatch({ 
+        type: 'UPDATE_USER_AVATAR', 
+        payload: { 
+          user_id: data.user_id, 
+          avatar_url: data.avatar_url 
+        } 
+      });
     });
   }, [user?.id]);
 
@@ -287,4 +308,4 @@ export const useChat = (): ChatContextType => {
     throw new Error('useChat must be used within a ChatProvider');
   }
   return context;
-}; 
+};

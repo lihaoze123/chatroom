@@ -251,6 +251,14 @@ def api_update_profile():
     username = data.get('username', '').strip()
     email = data.get('email', '').strip()
     avatar_url = data.get('avatar_url', '').strip()
+    real_name = data.get('real_name', '').strip()
+    phone = data.get('phone', '').strip()
+    address = data.get('address', '').strip()
+    bio = data.get('bio', '').strip()
+    gender = data.get('gender', '').strip()
+    birthday = data.get('birthday', '')
+    occupation = data.get('occupation', '').strip()
+    website = data.get('website', '').strip()
     
     current_app.logger.debug(f'资料更新尝试 - 用户ID: {current_user.id}, 新用户名: {username}, 新邮箱: {email}, IP: {client_ip}')
     
@@ -326,6 +334,23 @@ def api_update_profile():
         current_user.username = username
         current_user.email = email
         current_user.avatar_url = avatar_url
+        current_user.real_name = real_name
+        current_user.phone = phone
+        current_user.address = address
+        current_user.bio = bio
+        current_user.gender = gender
+        current_user.occupation = occupation
+        current_user.website = website
+        
+        # 处理生日字段
+        if birthday:
+            try:
+                from datetime import datetime
+                current_user.birthday = datetime.strptime(birthday, '%Y-%m-%d').date()
+            except ValueError:
+                current_user.birthday = None
+        else:
+            current_user.birthday = None
         
         db.session.commit()
         

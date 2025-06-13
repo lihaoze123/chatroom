@@ -7,6 +7,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import LoginForm from './components/auth/LoginForm';
 import RegisterForm from './components/auth/RegisterForm';
 import ChatPage from './pages/ChatPage';
+import ProfilePage from './pages/ProfilePage';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const pageVariants = {
@@ -82,6 +83,23 @@ const AnimatedRoutes = () => {
             >
               <ProtectedRoute>
                 <ChatPage />
+              </ProtectedRoute>
+            </motion.div>
+          }
+        />
+        
+        <Route
+          path="/profile"
+          element={
+            <motion.div
+              initial="initial"
+              animate="in"
+              exit="out"
+              variants={pageVariants}
+              transition={pageTransition}
+            >
+              <ProtectedRoute>
+                <ProfilePage />
               </ProtectedRoute>
             </motion.div>
           }

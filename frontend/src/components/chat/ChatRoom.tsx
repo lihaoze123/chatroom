@@ -13,9 +13,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 interface ChatRoomProps {
   room: ChatRoomType;
+  onLeaveRoom?: () => void;
 }
 
-const ChatRoom: React.FC<ChatRoomProps> = ({ room }) => {
+const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeaveRoom }) => {
   const { 
     messages, 
     typingUsers, 
@@ -23,9 +24,10 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room }) => {
     sendMessage, 
     setTyping, 
     connected,
-    loading 
+    loading,
+    leaveRoom 
   } = useChat();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [showUserList, setShowUserList] = useState(false);
 
   useEffect(() => {
@@ -52,8 +54,16 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room }) => {
     setTyping(isTyping);
   };
 
-  const handleLogout = async () => {
-    await logout();
+  const handleLeaveRoom = async () => {
+    try {
+      await leaveRoom(room.id);
+      // 通知父组件清除选中的房间
+      if (onLeaveRoom) {
+        onLeaveRoom();
+      }
+    } catch (error) {
+      console.error('退出聊天室失败:', error);
+    }
   };
 
   const toggleUserList = () => {
@@ -186,8 +196,8 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room }) => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={handleLogout}
-                title="退出登录"
+                onClick={handleLeaveRoom}
+                title="退出聊天室"
                 className="text-muted-foreground hover:text-destructive"
               >
                 <LogOut className="h-4 w-4" />
@@ -254,8 +264,8 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room }) => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={handleLogout}
-                title="退出登录"
+                onClick={handleLeaveRoom}
+                title="退出聊天室"
                 className="text-muted-foreground hover:text-destructive"
               >
                 <LogOut className="h-4 w-4" />
@@ -330,37 +340,34 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room }) => {
                 </div>
 
                                  <ScrollArea className="flex-1">
-                   <div className="p-2 space-y-1">
-                     <AnimatePresence>
-                       {onlineUsers.map((username, index) => (
-                         <motion.div
-                           key={username}
-                           initial={{ opacity: 0, x: 20 }}
-                           animate={{ opacity: 1, x: 0 }}
-                           exit={{ opacity: 0, x: -20 }}
-                           transition={{ 
-                             duration: 0.3,
-                             delay: index * 0.05
-                           }}
-                           className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted/50 transition-colors"
-                         >
-                           <motion.div
-                             whileHover={{ scale: 1.1 }}
-                             className={`w-2 h-2 rounded-full ${
-                               username === user?.username ? 'bg-green-500' : 'bg-blue-500'
-                             }`}
-                           />
-                           <span className="text-sm truncate flex-1">
-                             {username}
-                             {username === user?.username && (
-                               <span className="text-xs text-muted-foreground ml-1">(你)</span>
-                             )}
-                           </span>
-                         </motion.div>
-                       ))}
-                     </AnimatePresence>
-                   </div>
-                 </ScrollArea>
+                  <div className="p-2 space-y-1">
+                    {onlineUsers.map((username, index) => (
+                      <motion.div
+                        key={username}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ 
+                          duration: 0.3,
+                          delay: index * 0.05
+                        }}
+                        className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted/50 transition-colors"
+                      >
+                        <motion.div
+                          whileHover={{ scale: 1.1 }}
+                          className={`w-2 h-2 rounded-full ${
+                            username === user?.username ? 'bg-green-500' : 'bg-blue-500'
+                          }`}
+                        />
+                        <span className="text-sm truncate flex-1">
+                          {username}
+                          {username === user?.username && (
+                            <span className="text-xs text-muted-foreground ml-1">(你)</span>
+                          )}
+                        </span>
+                      </motion.div>
+                    ))}
+                  </div>
+                </ScrollArea>
               </motion.div>
             </>
           )}
@@ -370,4 +377,4 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room }) => {
   );
 };
 
-export default ChatRoom; 
+export default ChatRoom;

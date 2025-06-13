@@ -4,10 +4,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { ScrollArea } from '../ui/scroll-area';
-import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Button } from '../ui/button';
 import { ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import UserProfileModal from '../ui/user-profile-modal';
 
 interface MessageListProps {
   messages: Message[];
@@ -21,6 +22,8 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
   const previousLengthRef = useRef(0);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [showUserProfile, setShowUserProfile] = useState(false);
 
   // 防御性检查：确保 messages 是数组
   const safeMessages = Array.isArray(messages) ? messages : [];
@@ -119,6 +122,16 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
     return colors[senderId % colors.length];
   };
 
+  const handleAvatarClick = (userId: number) => {
+    setSelectedUserId(userId);
+    setShowUserProfile(true);
+  };
+
+  const handleCloseUserProfile = () => {
+    setShowUserProfile(false);
+    setSelectedUserId(null);
+  };
+
   return (
     <div className="flex-1 flex flex-col min-h-0 message-list-container relative">
       <ScrollArea ref={scrollAreaRef} className="flex-1 p-3 sm:p-4">
@@ -143,8 +156,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
           </motion.div>
         ) : (
           <div className="space-y-3 sm:space-y-4 chat-container">
-            <AnimatePresence initial={false}>
-              {safeMessages.map((message, index) => {
+            {safeMessages.map((message, index) => {
                 const isOwnMessage = message.user_id === user?.id;
                 const showAvatar = index === 0 || safeMessages[index - 1].user_id !== message.user_id;
                 const showTime = index === 0 || 
@@ -187,7 +199,14 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
                             transition={{ delay: 0.1, type: "spring", stiffness: 300 }}
                             className="flex-shrink-0 mr-2 sm:mr-3"
                           >
-                            <Avatar className="w-7 h-7 sm:w-8 sm:h-8">
+                            <Avatar 
+                              className="w-7 h-7 sm:w-8 sm:h-8 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all duration-200"
+                              onClick={() => handleAvatarClick(message.user_id)}
+                            >
+                              <AvatarImage 
+                                src={message.avatar_url ? `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${message.avatar_url}` : ''} 
+                                alt={message.username}
+                              />
                               <AvatarFallback className={`text-white text-xs sm:text-sm font-medium ${getAvatarColor(message.user_id)}`}>
                                 {message.username.charAt(0).toUpperCase()}
                               </AvatarFallback>
@@ -203,7 +222,8 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
                               initial={{ opacity: 0, x: -10 }}
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: 0.15 }}
-                              className="text-xs text-muted-foreground mb-1 truncate"
+                              className="text-xs text-muted-foreground mb-1 truncate cursor-pointer hover:text-primary transition-colors duration-200"
+                              onClick={() => handleAvatarClick(message.user_id)}
                             >
                               {message.username}
                             </motion.div>
@@ -253,9 +273,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
                       </div>
                     </div>
                   </motion.div>
-                );
-              })}
-            </AnimatePresence>
+                );              })}
 
             {/* 正在输入指示器 */}
             <AnimatePresence>
@@ -353,10 +371,18 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
               </Button>
             </motion.div>
           </motion.div>
-        )}
-      </AnimatePresence>
+        )}      </AnimatePresence>
+      
+      {/* 用户信息弹窗 */}
+      {selectedUserId && (
+        <UserProfileModal
+          userId={selectedUserId}
+          isOpen={showUserProfile}
+          onClose={handleCloseUserProfile}
+        />
+      )}
     </div>
   );
 };
 
-export default MessageList; 
+export default MessageList;

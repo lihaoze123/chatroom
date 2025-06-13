@@ -2,7 +2,7 @@ export interface User {
   id: number;
   username: string;
   email: string;
-  avatar?: string;
+  avatar_url?: string;
   real_name?: string;
   phone?: string;
   address?: string;
@@ -13,6 +13,8 @@ export interface User {
   website?: string;
   created_at: string;
   updated_at: string;
+  is_online?: boolean;
+  last_seen?: string;
 }
 
 export interface ChatRoom {
@@ -75,4 +77,4 @@ export interface ApiResponse<T = any> {
   data?: T;
   message?: string;
   error?: string;
-} 
+}

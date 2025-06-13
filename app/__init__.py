@@ -80,8 +80,8 @@ def create_app(config_class):
         except Exception as e:
             app.logger.warning(f"无法获取本机IP: {e}")
         
-        # 对于开发环境，添加通配符
-        cors_origins.append("*")
+        # 注意：当使用 supports_credentials=True 时，不能使用通配符 *
+        # 因为这会导致浏览器拒绝发送Cookie
     
     app.logger.info(f"CORS允许的来源: {cors_origins}")
     
@@ -102,6 +102,15 @@ def create_app(config_class):
     def unauthorized():
         from flask import jsonify
         return jsonify({'error': '未授权访问，请先登录'}), 401
+    
+    # 添加静态文件服务 - 用于提供上传的头像文件
+    from flask import send_from_directory
+    import os
+    
+    @app.route('/uploads/<path:filename>')
+    def uploaded_file(filename):
+        upload_folder = os.path.join(app.root_path, '..', 'uploads')
+        return send_from_directory(upload_folder, filename)
     
     # 注册蓝图
     from app.api import bp as api_bp

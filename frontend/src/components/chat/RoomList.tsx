@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { ChatRoom } from '../../types';
 import { chatAPI } from '../../services/api';
 import { useChat } from '../../contexts/ChatContext';
-import { Hash, Users, Plus, Search, Lock } from 'lucide-react';
+import { Hash, Users, Plus, Search, Lock, User, LogOut } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import toast from 'react-hot-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
@@ -11,6 +12,11 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
 import PasswordPrompt from '../ui/PasswordPrompt';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+
+// 获取API基础URL
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 
 interface RoomListProps {
@@ -24,10 +30,22 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const { createRoom, joinRoom } = useChat();
+  const { logout, user } = useAuth();
+  const navigate = useNavigate();
 
 
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
   const [pendingRoom, setPendingRoom] = useState<ChatRoom | null>(null);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('退出登录失败:', error);
+      toast.error('退出登录失败，请稍后重试');
+    }
+  };
 
   useEffect(() => {
     loadRooms();
@@ -252,6 +270,72 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
           </AnimatePresence>
         </ScrollArea>
       </CardContent>
+      
+      {/* 底部个人信息按钮 */}
+      <div className="p-3 border-t">
+        <motion.div
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <Button
+            variant="ghost"
+            className="w-full justify-start h-auto p-3"
+            onClick={() => navigate('/profile')}
+          >
+            <div className="flex items-center space-x-3 w-full">
+              <motion.div
+                className="flex-shrink-0"
+                whileHover={{ scale: 1.1 }}
+                transition={{ duration: 0.2 }}
+              >
+                {user ? (
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user.avatar_url ? `${API_BASE_URL}${user.avatar_url}` : ''} alt={user.username} />
+                    <AvatarFallback className="text-xs">
+                      {user.username.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <div className="p-2 bg-primary/10 rounded-full">
+                    <User className="h-4 w-4 text-primary" />
+                  </div>
+                )}
+              </motion.div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-medium">个人资料</p>
+                <p className="text-xs text-muted-foreground">查看和编辑个人信息</p>
+              </div>
+            </div>
+          </Button>
+        </motion.div>
+        
+        {/* 退出登录按钮 */}
+        <motion.div
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className="mt-2"
+        >
+          <Button
+            variant="ghost"
+            className="w-full justify-start h-auto p-3 text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={handleLogout}
+          >
+            <div className="flex items-center space-x-3 w-full">
+              <motion.div
+                className="flex-shrink-0 p-2 bg-destructive/10 rounded-full"
+                whileHover={{ rotate: 360 }}
+                transition={{ duration: 0.5 }}
+              >
+                <LogOut className="h-4 w-4 text-destructive" />
+              </motion.div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-medium">退出登录</p>
+                <p className="text-xs text-muted-foreground">安全退出当前账户</p>
+              </div>
+            </div>
+          </Button>
+        </motion.div>
+      </div>
 
       {/* 创建聊天室模态框 */}
       <AnimatePresence>
@@ -427,4 +511,4 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ onClose, onCreate }) 
   );
 };
 
-export default RoomList; 
+export default RoomList;

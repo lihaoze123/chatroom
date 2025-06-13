@@ -158,6 +158,18 @@ class SocketService {
     }
   }
 
+  onUserAvatarUpdated(callback: (data: { user_id: number; username: string; avatar_url: string }) => void) {
+    if (this.socket) {
+      this.socket.on('user_avatar_updated', callback);
+    }
+  }
+
+  emitAvatarUpdated(avatarUrl: string) {
+    if (this.socket) {
+      this.socket.emit('avatar_updated', { avatar_url: avatarUrl });
+    }
+  }
+
   // 移除事件监听器
   off(event: string, callback?: (...args: any[]) => void) {
     if (this.socket) {
@@ -174,4 +186,4 @@ class SocketService {
 }
 
 export const socketService = new SocketService();
-export default socketService; 
+export default socketService;

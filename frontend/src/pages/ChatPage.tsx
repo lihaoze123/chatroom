@@ -10,7 +10,7 @@ import { Button } from '../components/ui/button';
 
 const ChatPage: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
-  const { connectSocket, disconnectSocket } = useChat();
+  const { connectSocket, disconnectSocket, joinRoom } = useChat();
   const [selectedRoom, setSelectedRoom] = useState<ChatRoomType | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -27,10 +27,16 @@ const ChatPage: React.FC = () => {
   }, [isAuthenticated, user?.id, connectSocket, disconnectSocket]);
 
   const handleRoomSelect = async (room: ChatRoomType) => {
-    setSelectedRoom(room);
-    // 在移动端选择房间后关闭侧边栏
-    setIsMobileMenuOpen(false);
-    // 这里会触发ChatContext中的joinRoom
+    try {
+      // 先加入房间
+      await joinRoom(room.id);
+      // 然后设置为当前选中的房间
+      setSelectedRoom(room);
+      // 在移动端选择房间后关闭侧边栏
+      setIsMobileMenuOpen(false);
+    } catch (error) {
+      console.error('加入房间失败:', error);
+    }
   };
 
   const toggleMobileMenu = () => {
@@ -117,7 +123,10 @@ const ChatPage: React.FC = () => {
         {/* 聊天内容区域 */}
         <div className="flex-1 overflow-hidden">
           {selectedRoom ? (
-            <ChatRoomComponent room={selectedRoom} />
+            <ChatRoom 
+              room={selectedRoom} 
+              onLeaveRoom={() => setSelectedRoom(null)}
+            />
           ) : (
             <Card className="h-full">
               <CardContent className="h-full flex items-center justify-center">
@@ -155,46 +164,6 @@ const ChatPage: React.FC = () => {
   );
 };
 
-// 包装ChatRoom组件以处理房间加入逻辑
-const ChatRoomComponent: React.FC<{ room: ChatRoomType }> = ({ room }) => {
-  const { joinRoom, leaveRoom, currentRoom } = useChat();
-  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const handleRoomChange = async () => {
-      if (currentRoom && currentRoom.id !== room.id) {
-        // 离开当前房间
-        await leaveRoom(currentRoom.id);
-      }
-      
-      if (!currentRoom || currentRoom.id !== room.id) {
-        // 加入新房间
-        setLoading(true);
-        try {
-          await joinRoom(room.id);
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
 
-    handleRoomChange();
-  }, [room.id, currentRoom?.id]); // 移除joinRoom和leaveRoom依赖
-
-  if (loading) {
-    return (
-      <Card className="h-full">
-        <CardContent className="h-full flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">正在加入聊天室...</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return <ChatRoom room={room} />;
-};
-
-export default ChatPage; 
+export default ChatPage;

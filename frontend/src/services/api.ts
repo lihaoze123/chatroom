@@ -33,18 +33,18 @@ const api = axios.create({
 });
 
 // 专门用于身份验证检查的axios实例，不跟随重定向
-const authCheckApi = axios.create({
-  baseURL: API_BASE_URL,
-  withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  maxRedirects: 0, // 不自动跟随重定向
-  validateStatus: function (status) {
-    // 只有200状态码才被认为是成功，其他都会抛出错误
-    return status === 200;
-  },
-});
+// const authCheckApi = axios.create({
+//   baseURL: API_BASE_URL,
+//   withCredentials: true,
+//   headers: {
+//     'Content-Type': 'application/json',
+//   },
+//   maxRedirects: 0, // 不自动跟随重定向
+//   validateStatus: function (status) {
+//     // 只有200状态码才被认为是成功，其他都会抛出错误
+//     return status === 200;
+//   },
+// });
 
 // 请求拦截器
 api.interceptors.request.use(
@@ -108,12 +108,36 @@ export const authAPI = {
   },
 
   updateProfile: async (data: FormData) => {
-    const response = await api.post('/auth/profile/edit', data, {
+    const response = await api.post('/api/auth/profile/edit', data, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
     return response.data;
+  },
+
+  // 更新用户信息
+  updateUser: async (userData: Partial<User>): Promise<User> => {
+    const response = await api.put('/api/auth/profile', userData);
+    return response.data.user;
+  },
+  
+  // 上传头像
+  uploadAvatar: async (file: File): Promise<{avatar_url: string, user: User}> => {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    
+    const response = await api.post('/api/upload/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  getUserProfile: async (userId: number): Promise<User> => {
+    const response = await api.get(`/api/users/${userId}/profile`);
+    return response.data.user;
   },
 };
 
@@ -166,4 +190,4 @@ export const chatAPI = {
   },
 };
 
-export default api; 
+export default api;

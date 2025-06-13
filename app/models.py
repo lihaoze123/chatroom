@@ -17,6 +17,17 @@ class User(UserMixin, db.Model):
     is_online = db.Column(db.Boolean, default=False)
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # 扩展个人信息字段
+    real_name = db.Column(db.String(100), default='')
+    phone = db.Column(db.String(20), default='')
+    address = db.Column(db.Text, default='')
+    bio = db.Column(db.Text, default='')
+    gender = db.Column(db.String(10), default='')
+    birthday = db.Column(db.Date, nullable=True)
+    occupation = db.Column(db.String(100), default='')
+    website = db.Column(db.String(255), default='')
     
     # 关系
     messages = db.relationship('Message', backref='author', lazy='dynamic', cascade='all, delete-orphan')
@@ -51,7 +62,16 @@ class User(UserMixin, db.Model):
             'avatar_url': self.avatar_url,
             'is_online': self.is_online,
             'last_seen': self.last_seen.isoformat() if self.last_seen else None,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'real_name': self.real_name,
+            'phone': self.phone,
+            'address': self.address,
+            'bio': self.bio,
+            'gender': self.gender,
+            'birthday': self.birthday.isoformat() if self.birthday else None,
+            'occupation': self.occupation,
+            'website': self.website
         }
     
     def __repr__(self):
@@ -176,4 +196,4 @@ class Message(db.Model):
 @login_manager.user_loader
 def load_user(user_id):
     """Flask-Login用户加载器"""
-    return User.query.get(int(user_id)) 
+    return User.query.get(int(user_id))

@@ -255,4 +255,27 @@ def handle_get_online_users(data):
 @socketio.on('ping')
 def handle_ping():
     """处理心跳检测"""
-    emit('pong') 
+    emit('pong')
+
+@socketio.on('avatar_updated')
+def handle_avatar_updated(data):
+    """处理头像更新事件"""
+    if not current_user.is_authenticated:
+        return
+    
+    avatar_url = data.get('avatar_url')
+    if not avatar_url:
+        return
+    
+    try:
+        # 广播头像更新到所有房间
+        emit('user_avatar_updated', {
+            'user_id': current_user.id,
+            'username': current_user.username,
+            'avatar_url': avatar_url
+        }, broadcast=True)
+        
+        logger.info(f'用户 {current_user.username} 更新了头像')
+        
+    except Exception as e:
+        logger.error(f'广播头像更新失败: {e}')
