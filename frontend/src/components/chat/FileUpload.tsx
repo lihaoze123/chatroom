@@ -65,15 +65,16 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUploaded, disabled }) => 
   };
 
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-1">
       {/* 图片上传 */}
       <Button
         type="button"
         variant="ghost"
-        size="sm"
+        size="icon"
         disabled={disabled || uploading}
         onClick={() => imageInputRef.current?.click()}
-        className="p-2 h-8 w-8"
+        className="h-10 w-10 sm:h-11 sm:w-11 flex-shrink-0"
+        title="上传图片"
       >
         <Image className="h-4 w-4" />
       </Button>
@@ -82,10 +83,11 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUploaded, disabled }) => 
       <Button
         type="button"
         variant="ghost"
-        size="sm"
+        size="icon"
         disabled={disabled || uploading}
         onClick={() => fileInputRef.current?.click()}
-        className="p-2 h-8 w-8"
+        className="h-10 w-10 sm:h-11 sm:w-11 flex-shrink-0"
+        title="上传文件"
       >
         <FileText className="h-4 w-4" />
       </Button>
@@ -108,7 +110,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUploaded, disabled }) => 
       />
       
       {uploading && (
-        <div className="flex items-center text-sm text-muted-foreground">
+        <div className="flex items-center text-sm text-muted-foreground ml-2">
           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
           上传中...
         </div>
