@@ -1,6 +1,12 @@
 # app/__init__.py
 # Flask应用工厂
 
+# 修复PyInstaller构建问题 - 导入gevent异步驱动
+try:
+    from engineio.async_drivers import gevent
+except ImportError:
+    pass
+
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
@@ -50,7 +56,8 @@ def setup_logging(app):
 
 def create_app(config_class):
     """应用工厂函数"""
-    app = Flask(__name__)
+    # 禁用Flask默认的静态文件处理，我们将自己处理
+    app = Flask(__name__, static_folder=None)
     app.config.from_object(config_class)
     
     # 设置日志
@@ -65,6 +72,9 @@ def create_app(config_class):
         "http://localhost:3000", 
         "http://127.0.0.1:3000", 
         "http://0.0.0.0:3000",
+        "http://localhost:5000",  # 允许从同一服务器访问（生产环境）
+        "http://127.0.0.1:5000",
+        "http://0.0.0.0:5000",
     ]
     
     # 如果是开发环境，允许局域网访问
@@ -73,10 +83,18 @@ def create_app(config_class):
         try:
             hostname = socket.gethostname()
             local_ip = socket.gethostbyname(hostname)
-            local_origin = f"http://{local_ip}:3000"
-            if local_origin not in cors_origins:
-                cors_origins.append(local_origin)
-                app.logger.info(f"添加本机IP到CORS允许列表: {local_origin}")
+            # 添加3000端口（前端开发服务器）
+            local_origin_3000 = f"http://{local_ip}:3000"
+            if local_origin_3000 not in cors_origins:
+                cors_origins.append(local_origin_3000)
+                app.logger.info(f"添加本机IP到CORS允许列表: {local_origin_3000}")
+            
+            # 添加5000端口（后端服务器，支持局域网直接访问）
+            local_origin_5000 = f"http://{local_ip}:5000"
+            if local_origin_5000 not in cors_origins:
+                cors_origins.append(local_origin_5000)
+                app.logger.info(f"添加本机IP到CORS允许列表: {local_origin_5000}")
+                
         except Exception as e:
             app.logger.warning(f"无法获取本机IP: {e}")
         
@@ -103,6 +121,18 @@ def create_app(config_class):
         from flask import jsonify
         return jsonify({'error': '未授权访问，请先登录'}), 401
     
+    # 先初始化Socket.IO，确保它的路由在我们的通配符路由之前注册
+    socketio.init_app(app, 
+                     cors_allowed_origins=cors_origins,
+                     logger=True,
+                     engineio_logger=True,
+                     ping_timeout=60,
+                     ping_interval=25)
+    
+    # 注册API蓝图
+    from app.api import bp as api_bp
+    app.register_blueprint(api_bp, url_prefix='/api')
+    
     # 添加静态文件服务 - 用于提供上传的头像文件
     from flask import send_from_directory
     import os
@@ -112,16 +142,48 @@ def create_app(config_class):
         upload_folder = os.path.join(app.root_path, '..', 'uploads')
         return send_from_directory(upload_folder, filename)
     
-    # 注册蓝图
-    from app.api import bp as api_bp
-    app.register_blueprint(api_bp, url_prefix='/api')
+    # 添加前端静态文件服务
+    @app.route('/', defaults={'path': ''})
+    @app.route('/<path:path>')
+    def serve_frontend(path):
+        """服务前端静态文件"""
+        import sys
+        
+        # 确定静态文件目录
+        if getattr(sys, 'frozen', False):
+            # 如果是打包后的可执行文件
+            static_folder = os.path.join(sys._MEIPASS, 'frontend', 'build')
+        else:
+            # 开发环境
+            static_folder = os.path.join(app.root_path, '..', 'frontend', 'build')
+        
+        # 如果请求的是API路径、Socket.IO路径或uploads路径，跳过前端路由
+        if path.startswith('api/') or path.startswith('uploads/') or path.startswith('socket.io/'):
+            from flask import abort
+            abort(404)
+        
+        # 处理静态文件请求（CSS、JS、图片等）
+        if path.startswith('static/'):
+            file_path = os.path.join(static_folder, path)
+            if os.path.exists(file_path):
+                return send_from_directory(static_folder, path)
+            else:
+                from flask import abort
+                abort(404)
+        
+        # 处理其他静态资源（favicon.ico、manifest.json等）
+        if path and os.path.exists(os.path.join(static_folder, path)):
+            return send_from_directory(static_folder, path)
+        
+        # 对于所有其他路径，返回index.html（支持React Router）
+        index_path = os.path.join(static_folder, 'index.html')
+        if os.path.exists(index_path):
+            return send_from_directory(static_folder, 'index.html')
+        else:
+            from flask import abort
+            abort(404)
     
-    socketio.init_app(app, 
-                     cors_allowed_origins=cors_origins,
-                     logger=True,
-                     engineio_logger=True,
-                     ping_timeout=60,
-                     ping_interval=25)
+
     
     # 创建数据库表
     with app.app_context():
