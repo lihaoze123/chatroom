@@ -2,9 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Smile } from 'lucide-react';
 import { Button } from '../ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
+import FileUpload from './FileUpload';
 
 interface MessageInputProps {
-  onSendMessage: (message: string) => void;
+  onSendMessage: (message: string, messageType?: string, fileInfo?: any) => void;
   onTyping: (isTyping: boolean) => void;
   disabled?: boolean;
 }
@@ -52,6 +53,17 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, di
         onTyping(false);
       }
     }, 2000);
+  };
+
+  const handleFileUploaded = (fileInfo: {
+    url: string;
+    name: string;
+    size: number;
+    type: string;
+  }) => {
+    // 发送文件消息
+    const messageType = fileInfo.type === 'image' ? 'image' : 'file';
+    onSendMessage('', messageType, fileInfo);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -120,6 +132,9 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, di
       className="border-t bg-background p-3 sm:p-4 message-input-container mobile-safe-area flex-shrink-0"
     >
       <form onSubmit={handleSubmit} className="flex items-end space-x-2 sm:space-x-3">
+        {/* 文件上传按钮 */}
+        <FileUpload onFileUploaded={handleFileUploaded} disabled={disabled} />
+        
         {/* 表情按钮 */}
         <div className="relative emoji-panel-container">
           <motion.div

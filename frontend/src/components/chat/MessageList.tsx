@@ -6,7 +6,7 @@ import { zhCN } from 'date-fns/locale';
 import { ScrollArea } from '../ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Button } from '../ui/button';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Download, FileText, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import UserProfileModal from '../ui/user-profile-modal';
 
@@ -46,6 +46,93 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
   // 防御性检查：确保 messages 是数组
   const safeMessages = Array.isArray(messages) ? messages : [];
   const safeTypingUsers = Array.isArray(typingUsers) ? typingUsers : [];
+
+  // 渲染消息内容
+  const renderMessageContent = (message: Message) => {
+    if (message.message_type === 'image' || message.message_type === 'file') {
+      try {
+        const fileInfo = JSON.parse(message.content);
+        const fileUrl = fileInfo.url.startsWith('http') ? fileInfo.url : `${getAPIBaseURL()}${fileInfo.url}`;
+        
+        if (message.message_type === 'image') {
+          return (
+            <div className="space-y-2">
+              {fileInfo.description && (
+                <div className="text-sm text-gray-800 dark:text-gray-200 break-words whitespace-pre-wrap">
+                  {fileInfo.description}
+                </div>
+              )}
+              <div className="relative max-w-sm">
+                <img 
+                  src={fileUrl} 
+                  alt={fileInfo.name}
+                  className="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => window.open(fileUrl, '_blank')}
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    target.nextElementSibling?.classList.remove('hidden');
+                  }}
+                />
+                <div className="hidden flex items-center gap-2 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                  <ImageIcon className="w-5 h-5 text-gray-500" />
+                  <span className="text-sm text-gray-600 dark:text-gray-300">图片加载失败</span>
+                </div>
+              </div>
+            </div>
+          );
+        } else {
+          return (
+            <div className="space-y-2">
+              {fileInfo.description && (
+                <div className="text-sm text-gray-800 dark:text-gray-200 break-words whitespace-pre-wrap">
+                  {fileInfo.description}
+                </div>
+              )}
+              <div className="flex items-center gap-3 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg max-w-sm">
+                <FileText className="w-6 h-6 text-blue-500 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                    {fileInfo.name}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {(fileInfo.size / 1024 / 1024).toFixed(2)} MB
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = fileUrl;
+                    link.download = fileInfo.name;
+                    link.click();
+                  }}
+                  className="flex-shrink-0"
+                >
+                  <Download className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          );
+        }
+      } catch (error) {
+        console.error('解析文件信息失败:', error);
+        return (
+          <div className="text-sm text-gray-800 dark:text-gray-200 break-words whitespace-pre-wrap">
+            {message.content}
+          </div>
+        );
+      }
+    }
+    
+    // 默认文本消息
+    return (
+      <div className="text-sm text-gray-800 dark:text-gray-200 break-words whitespace-pre-wrap">
+        {message.content}
+      </div>
+    );
+  };
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -264,9 +351,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
                                 : 'bg-muted text-foreground rounded-bl-md'
                             }`}
                           >
-                            <p className="text-sm whitespace-pre-wrap break-words">
-                              {message.content}
-                            </p>
+                            {renderMessageContent(message)}
                           </motion.div>
                           
                           {/* 消息时间 */}
