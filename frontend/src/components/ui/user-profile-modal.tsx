@@ -60,6 +60,24 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, isOpen, onC
     return new Date(dateString).toLocaleDateString('zh-CN');
   };
 
+  // 获取API基础URL
+  const getAPIBaseURL = (): string => {
+    // 优先使用环境变量
+    if (process.env.REACT_APP_API_URL) {
+      return process.env.REACT_APP_API_URL;
+    }
+    
+    // 在生产环境或局域网环境下，使用当前页面的host
+    if (process.env.NODE_ENV === 'production' || window.location.hostname !== 'localhost') {
+      const protocol = window.location.protocol;
+      const hostname = window.location.hostname;
+      return `${protocol}//${hostname}:5000`;
+    }
+    
+    // 开发环境默认使用localhost
+    return 'http://localhost:5000';
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md mx-auto">
@@ -93,7 +111,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, isOpen, onC
                   <Avatar className="w-20 h-20">
                     {user.avatar_url && (
                       <AvatarImage 
-                        src={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${user.avatar_url}`} 
+                        src={`${getAPIBaseURL()}${user.avatar_url}`} 
                         alt={user.username}
                       />
                     )}

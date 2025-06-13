@@ -8,7 +8,24 @@ import { socketService } from '../../services/socket';
 import toast from 'react-hot-toast';
 
 // 获取API基础URL
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const getAPIBaseURL = (): string => {
+  // 优先使用环境变量
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
+  
+  // 在生产环境或局域网环境下，使用当前页面的host
+  if (process.env.NODE_ENV === 'production' || window.location.hostname !== 'localhost') {
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    return `${protocol}//${hostname}:5000`;
+  }
+  
+  // 开发环境默认使用localhost
+  return 'http://localhost:5000';
+};
+
+const API_BASE_URL = getAPIBaseURL();
 
 interface AvatarUploadProps {
   user: User;

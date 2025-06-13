@@ -1,23 +1,22 @@
 import { io, Socket } from 'socket.io-client';
 import { Message } from '../types';
 
-// 动态获取Socket服务器URL的函数
-const getSocketUrl = (): string => {
+// 获取Socket服务器URL
+const getSocketURL = (): string => {
   // 优先使用环境变量
   if (process.env.REACT_APP_SOCKET_URL) {
     return process.env.REACT_APP_SOCKET_URL;
   }
   
-  // 如果没有设置环境变量，则根据当前页面的host动态构建
-  const { protocol, hostname } = window.location;
-  
-  // 如果是localhost或127.0.0.1，保持原样
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'http://localhost:5000';
+  // 在生产环境或局域网环境下，使用当前页面的host
+  if (process.env.NODE_ENV === 'production' || window.location.hostname !== 'localhost') {
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    return `${protocol}//${hostname}:5000`;
   }
   
-  // 否则使用当前页面的hostname，端口5000
-  return `${protocol}//${hostname}:5000`;
+  // 开发环境默认使用localhost
+  return 'http://localhost:5000';
 };
 
 class SocketService {
@@ -25,7 +24,7 @@ class SocketService {
   private readonly url: string;
 
   constructor() {
-    this.url = getSocketUrl();
+    this.url = getSocketURL();
     console.log('Socket URL:', this.url);
   }
 

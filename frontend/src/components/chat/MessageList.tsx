@@ -15,6 +15,24 @@ interface MessageListProps {
   typingUsers: string[];
 }
 
+// 获取API基础URL
+const getAPIBaseURL = (): string => {
+  // 优先使用环境变量
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
+  
+  // 在生产环境或局域网环境下，使用当前页面的host
+  if (process.env.NODE_ENV === 'production' || window.location.hostname !== 'localhost') {
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    return `${protocol}//${hostname}:5000`;
+  }
+  
+  // 开发环境默认使用localhost
+  return 'http://localhost:5000';
+};
+
 const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
   const { user } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -204,7 +222,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
                               onClick={() => handleAvatarClick(message.user_id)}
                             >
                               <AvatarImage 
-                                src={message.avatar_url ? `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${message.avatar_url}` : ''} 
+                                src={message.avatar_url ? `${getAPIBaseURL()}${message.avatar_url}` : ''} 
                                 alt={message.username}
                               />
                               <AvatarFallback className={`text-white text-xs sm:text-sm font-medium ${getAvatarColor(message.user_id)}`}>
