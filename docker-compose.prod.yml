@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # 聊天室应用 - 生产环境配置
   chatroom:

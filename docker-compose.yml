@@ -1,7 +1,5 @@
-version: '3.8'
-
 services:
-  # 聊天室应用
+  # 聊天室应用 - SQLite 版本
   chatroom:
     build: .
     ports:
@@ -27,8 +25,10 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    profiles:
+      - sqlite
 
-  # PostgreSQL 数据库 (可选，如果需要使用 PostgreSQL 而不是 SQLite)
+  # PostgreSQL 数据库
   postgres:
     image: postgres:15-alpine
     environment:
@@ -40,10 +40,15 @@ services:
     ports:
       - "5432:5432"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chatroom"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     profiles:
       - postgres
 
-  # 使用 PostgreSQL 的聊天室应用配置
+  # 聊天室应用 - PostgreSQL 版本
   chatroom-postgres:
     build: .
     ports:
@@ -61,7 +66,8 @@ services:
       # 持久化日志文件
       - ./logs:/app/logs
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "/app/scripts/healthcheck.sh"]
