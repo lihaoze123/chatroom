@@ -19,6 +19,8 @@ class UserLogin(BaseModel):
 
 class UserUpdate(BaseModel):
     """用户更新模式"""
+    username: Optional[str] = Field(None, min_length=2, max_length=20, description="用户名")
+    email: Optional[EmailStr] = Field(None, description="邮箱地址")
     real_name: Optional[str] = Field(None, max_length=100, description="真实姓名")
     phone: Optional[str] = Field(None, max_length=20, description="电话号码")
     address: Optional[str] = Field(None, description="地址")
@@ -27,6 +29,7 @@ class UserUpdate(BaseModel):
     birthday: Optional[date] = Field(None, description="生日")
     occupation: Optional[str] = Field(None, max_length=100, description="职业")
     website: Optional[str] = Field(None, max_length=255, description="个人网站")
+    avatar_url: Optional[str] = Field(None, description="头像URL")
 
 class UserResponse(UserBase):
     """用户响应模式"""

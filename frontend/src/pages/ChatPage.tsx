@@ -10,7 +10,7 @@ import { Button } from '../components/ui/button';
 
 const ChatPage: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
-  const { connectSocket, disconnectSocket, joinRoom } = useChat();
+  const { connectSocket, disconnectSocket, joinRoom, enterRoom } = useChat();
   const [selectedRoom, setSelectedRoom] = useState<ChatRoomType | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -26,16 +26,21 @@ const ChatPage: React.FC = () => {
     };
   }, [isAuthenticated, user?.id, connectSocket, disconnectSocket]);
 
-  const handleRoomSelect = async (room: ChatRoomType) => {
+  const handleRoomSelect = async (room: ChatRoomType, isUserRoom?: boolean) => {
     try {
-      // 先加入房间
-      await joinRoom(room.id);
+      if (isUserRoom) {
+        // 用户已加入的房间，直接进入
+        await enterRoom(room.id);
+      } else {
+        // 需要加入的房间
+        await joinRoom(room.id);
+      }
       // 然后设置为当前选中的房间
       setSelectedRoom(room);
       // 在移动端选择房间后关闭侧边栏
       setIsMobileMenuOpen(false);
     } catch (error) {
-      console.error('加入房间失败:', error);
+      console.error('房间操作失败:', error);
     }
   };
 

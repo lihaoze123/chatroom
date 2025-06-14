@@ -77,9 +77,30 @@ async def upload_avatar(
     current_user.avatar_url = avatar_url
     db.commit()
     
+    # 刷新用户对象以获取最新数据
+    db.refresh(current_user)
+    
     return {
         "message": "头像上传成功",
-        "avatar_url": avatar_url
+        "avatar_url": avatar_url,
+        "user": {
+            "id": current_user.id,
+            "username": current_user.username,
+            "email": current_user.email,
+            "avatar_url": current_user.avatar_url,
+            "real_name": current_user.real_name,
+            "phone": current_user.phone,
+            "address": current_user.address,
+            "bio": current_user.bio,
+            "gender": current_user.gender,
+            "birthday": current_user.birthday.isoformat() if current_user.birthday else None,
+            "occupation": current_user.occupation,
+            "website": current_user.website,
+            "created_at": current_user.created_at.isoformat(),
+            "updated_at": current_user.updated_at.isoformat(),
+            "is_online": getattr(current_user, 'is_online', False),
+            "last_seen": current_user.last_seen.isoformat() if current_user.last_seen else None
+        }
     }
 
 @router.post("/file")

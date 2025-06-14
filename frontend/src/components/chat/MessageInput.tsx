@@ -62,7 +62,8 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, di
     type: string;
   }) => {
     // 发送文件消息
-    const messageType = fileInfo.type === 'image' ? 'image' : 'file';
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+    const messageType = imageExtensions.includes(fileInfo.type.toLowerCase()) ? 'image' : 'file';
     onSendMessage('', messageType, fileInfo);
   };
 
@@ -140,7 +141,6 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, di
         {/* 表情按钮 */}
         <div className="relative emoji-panel-container flex-shrink-0">
           <motion.div
-            whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
           >
             <Button
@@ -186,7 +186,6 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, di
                         stiffness: 400,
                         damping: 25
                       }}
-                      whileHover={{ scale: 1.2 }}
                       whileTap={{ scale: 0.9 }}
                     >
                       <Button
@@ -261,7 +260,6 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, di
             {/* 发送按钮 */}
             <div className="flex-shrink-0">
               <motion.div
-                whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 animate={{
                   scale: message.trim() ? [1, 1.1, 1] : 1,

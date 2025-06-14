@@ -121,13 +121,63 @@ async def update_profile(
     db: Session = Depends(get_db)
 ):
     """更新用户资料"""
+    # 添加调试日志
+    print(f"🔍 收到的更新数据: {profile_data.dict(exclude_unset=True)}")
+    print(f"👤 当前用户: {current_user.username} (ID: {current_user.id})")
+    
+    # 如果要更新用户名，需要验证
+    if profile_data.username and profile_data.username != current_user.username:
+        # 验证用户名格式
+        is_valid, error_msg = validate_username(profile_data.username)
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=error_msg
+            )
+        
+        # 检查用户名是否已被使用
+        existing_user = db.query(User).filter(
+            User.username == profile_data.username,
+            User.id != current_user.id
+        ).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="该用户名已被使用，请选择其他用户名"
+            )
+    
+    # 如果要更新邮箱，需要验证
+    if profile_data.email and profile_data.email != current_user.email:
+        # 验证邮箱格式
+        if not validate_email(str(profile_data.email)):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="请输入有效的邮箱地址"
+            )
+        
+        # 检查邮箱是否已被使用
+        existing_user = db.query(User).filter(
+            User.email == profile_data.email,
+            User.id != current_user.id
+        ).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="该邮箱已被注册，请使用其他邮箱"
+            )
+    
     # 更新用户信息
     for field, value in profile_data.dict(exclude_unset=True).items():
-        setattr(current_user, field, value)
+        if hasattr(current_user, field):
+            print(f"✅ 更新字段 {field}: {getattr(current_user, field)} -> {value}")
+            setattr(current_user, field, value)
+        else:
+            print(f"⚠️  字段 {field} 不存在于User模型中")
     
     db.commit()
     db.refresh(current_user)
     
+    print(f"✅ 用户资料更新成功")
     return current_user
 
 @router.put("/change-password")
