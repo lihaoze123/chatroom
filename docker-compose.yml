@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # 聊天室应用
+  chatroom:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=false
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DATABASE_URL=sqlite:///./instance/chatroom.db
+      - SECRET_KEY=your-secret-key-change-in-production-please
+      - LOG_LEVEL=INFO
+    volumes:
+      # 持久化数据库文件
+      - ./instance:/app/instance
+      # 持久化上传文件
+      - ./uploads:/app/uploads
+      # 持久化日志文件
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/app/scripts/healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL 数据库 (可选，如果需要使用 PostgreSQL 而不是 SQLite)
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=chatroom
+      - POSTGRES_USER=chatroom
+      - POSTGRES_PASSWORD=chatroom_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    profiles:
+      - postgres
+
+  # 使用 PostgreSQL 的聊天室应用配置
+  chatroom-postgres:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=false
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DATABASE_URL=postgresql://chatroom:chatroom_password@postgres:5432/chatroom
+      - SECRET_KEY=your-secret-key-change-in-production-please
+      - LOG_LEVEL=INFO
+    volumes:
+      # 持久化上传文件
+      - ./uploads:/app/uploads
+      # 持久化日志文件
+      - ./logs:/app/logs
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/app/scripts/healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    profiles:
+      - postgres
+
+volumes:
+  postgres_data: 

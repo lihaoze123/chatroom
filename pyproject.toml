@@ -21,6 +21,7 @@ dependencies = [
     "pydantic-settings>=2.0.0",
     "email-validator>=2.0.0",
     "pyinstaller>=6.14.1",
+    "psycopg2-binary>=2.9.0",  # PostgreSQL 驱动
 ]
 
 [build-system]

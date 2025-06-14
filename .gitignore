@@ -14,3 +14,11 @@ instance/
 logs/
 public/
 uploads/
+
+# Docker
+.env
+backups/
+
+# IDE
+.vscode/
+.idea/
