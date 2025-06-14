@@ -1,8 +1,5 @@
 # app/api/__init__.py
-# API蓝图
+# API路由包
 
-from flask import Blueprint
-
-bp = Blueprint('api', __name__)
-
-from app.api import auth, chat, user_profile, upload
+# FastAPI路由模块
+from app.api import auth, rooms, messages, upload
