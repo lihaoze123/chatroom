@@ -18,11 +18,12 @@ const getAPIBaseURL = (): string => {
   if (process.env.NODE_ENV === 'production' || window.location.hostname !== 'localhost') {
     const protocol = window.location.protocol;
     const hostname = window.location.hostname;
-    return `${protocol}//${hostname}:5000`;
+    // 改为FastAPI端口8000
+    return `${protocol}//${hostname}:8000`;
   }
   
-  // 开发环境默认使用localhost
-  return 'http://localhost:5000';
+  // 开发环境默认使用localhost:8000
+  return 'http://localhost:8000';
 };
 
 const API_BASE_URL = getAPIBaseURL();
@@ -44,10 +45,22 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
   const [preview, setPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // 防护：如果用户对象为空，不渲染组件
+  if (!user || !user.username) {
+    return null;
+  }
+
   const sizeClasses = {
     sm: 'h-8 w-8',
     md: 'h-16 w-16',
     lg: 'h-24 w-24'
+  };
+
+  // 根据尺寸调整图标大小
+  const iconSizes = {
+    sm: 'h-3 w-3',
+    md: 'h-4 w-4',
+    lg: 'h-5 w-5'
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,14 +98,29 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
       const result = await authAPI.uploadAvatar(file);
       // 先清除预览，然后更新用户信息
       setPreview(null);
-      onAvatarUpdate(result.user);
       
-      // 通过Socket通知其他用户头像更新
-      if (result.user.avatar_url) {
-        socketService.emitAvatarUpdated(result.user.avatar_url);
+      // 检查返回的用户对象是否有效
+      if (result.user && result.user.username) {
+        onAvatarUpdate(result.user);
+        
+        // 通过Socket通知其他用户头像更新
+        if (result.user.avatar_url) {
+          socketService.emitAvatarUpdated(result.user.avatar_url);
+        }
+        
+        toast.success('头像更新成功！');
+      } else {
+        // 如果返回的用户对象无效，手动更新当前用户的头像URL
+        console.warn('返回的用户对象无效，使用备用方案');
+        const updatedUser = { ...user, avatar_url: result.avatar_url };
+        onAvatarUpdate(updatedUser);
+        
+        if (result.avatar_url) {
+          socketService.emitAvatarUpdated(result.avatar_url);
+        }
+        
+        toast.success('头像更新成功！');
       }
-      
-      toast.success('头像更新成功！');
     } catch (error) {
       console.error('头像上传失败:', error);
       toast.error(error instanceof Error ? error.message : '头像上传失败，请稍后重试');
@@ -118,9 +146,9 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
   };
 
   return (
-    <div className="relative inline-block">
-      {/* 头像显示 */}
-      <div className="relative group">
+    <div className="flex flex-col items-center">
+      {/* 头像显示容器 */}
+      <div className="relative group inline-block">
         <Avatar className={`${sizeClasses[size]} transition-all duration-200`}>
           <AvatarImage 
             src={preview || (user.avatar_url ? `${API_BASE_URL}${user.avatar_url}` : '')} 
@@ -139,12 +167,14 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
         
         {/* 上传按钮覆盖层 */}
         {showUploadButton && (
-          <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center cursor-pointer"
-               onClick={handleUploadClick}>
+          <div 
+            className={`absolute inset-0 bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center cursor-pointer ${sizeClasses[size]}`}
+            onClick={handleUploadClick}
+          >
             {uploading ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              <div className={`animate-spin rounded-full border-b-2 border-white ${iconSizes[size]}`}></div>
             ) : (
-              <Camera className="h-4 w-4 text-white" />
+              <Camera className={`${iconSizes[size]} text-white`} />
             )}
           </div>
         )}
@@ -161,7 +191,7 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
           <Button
             variant="destructive"
             size="icon"
-            className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+            className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-lg"
             onClick={clearPreview}
           >
             <X className="h-3 w-3" />
@@ -171,7 +201,7 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({
       
       {/* 独立上传按钮 */}
       {showUploadButton && size === 'lg' && (
-        <div className="mt-4 flex justify-center">
+        <div className="mt-4">
           <Button
             variant="outline"
             onClick={handleUploadClick}

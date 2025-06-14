@@ -26,26 +26,29 @@ const getAPIBaseURL = (): string => {
   if (process.env.NODE_ENV === 'production' || window.location.hostname !== 'localhost') {
     const protocol = window.location.protocol;
     const hostname = window.location.hostname;
-    return `${protocol}//${hostname}:5000`;
+    // 改为FastAPI端口8000
+    return `${protocol}//${hostname}:8000`;
   }
   
-  // 开发环境默认使用localhost
-  return 'http://localhost:5000';
+  // 开发环境默认使用localhost:8000
+  return 'http://localhost:8000';
 };
 
 const API_BASE_URL = getAPIBaseURL();
 
 interface RoomListProps {
-  onRoomSelect: (room: ChatRoom) => void;
+  onRoomSelect: (room: ChatRoom, isUserRoom?: boolean) => void;
   selectedRoomId?: number;
 }
 
 const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => {
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
+  const [userRooms, setUserRooms] = useState<ChatRoom[]>([]);
+  const [availableRooms, setAvailableRooms] = useState<ChatRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const { createRoom, joinRoom } = useChat();
+  const { createRoom, joinRoom, enterRoom } = useChat();
   const { logout, user } = useAuth();
   const navigate = useNavigate();
 
@@ -70,8 +73,21 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
   const loadRooms = async () => {
     try {
       setLoading(true);
-      const roomsData = await chatAPI.getRooms();
-      setRooms(roomsData);
+      const response = await chatAPI.getRooms();
+      
+      // 检查是否是新的数据结构
+      if (Array.isArray(response)) {
+        // 旧的数据结构，所有房间都在一个数组中
+        setRooms(response);
+        setUserRooms([]);
+        setAvailableRooms(response);
+      } else {
+        // 新的数据结构，区分用户房间和可用房间
+        const { user_rooms = [], available_rooms = [] } = response;
+        setUserRooms(user_rooms);
+        setAvailableRooms(available_rooms);
+        setRooms([...user_rooms, ...available_rooms]);
+      }
     } catch (error) {
       console.error('Load rooms error:', error);
       toast.error('加载聊天室失败');
@@ -88,8 +104,15 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
   const handleCreateRoom = async (name: string, description?: string, isPrivate?: boolean, password?: string) => {
     const room = await createRoom(name, description, isPrivate, password);
     if (room) {
+      // 创建者自动成为房间成员，所以应该添加到用户房间列表
+      setUserRooms(prev => [...prev, room]);
       setRooms(prev => [...prev, room]);
       setShowCreateModal(false);
+      
+      // 重新加载房间列表以确保数据同步
+      setTimeout(() => {
+        loadRooms();
+      }, 500);
     }
   };
 
@@ -118,7 +141,6 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
         >
           <CardTitle className="text-lg">聊天室</CardTitle>
           <motion.div
-            whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
           >
             <Button
@@ -202,7 +224,6 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
                       layout
                     >
                       <motion.div
-                        whileHover={{ scale: 1.02, y: -2 }}
                         whileTap={{ scale: 0.98 }}
                         transition={{ type: "spring", stiffness: 400, damping: 25 }}
                       >
@@ -210,11 +231,19 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
                           variant={selectedRoomId === room.id ? "secondary" : "ghost"}
                           className="w-full justify-start h-auto p-3 lg:p-4 relative overflow-hidden"
                           onClick={() => {
-                            if (room.is_private) {
+                            // 检查是否是用户已加入的房间
+                            const isUserRoom = userRooms.some(ur => ur.id === room.id);
+                            
+                            if (isUserRoom) {
+                              // 用户已加入的房间，直接进入
+                              onRoomSelect(room, true);
+                            } else if (room.is_private) {
+                              // 私密房间需要密码
                               setPendingRoom(room);
                               setShowPasswordPrompt(true);
                             } else {
-                              onRoomSelect(room);
+                              // 公开房间，需要加入
+                              onRoomSelect(room, false);
                             }
                           }}
                         >
@@ -230,8 +259,6 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
                           <div className="flex items-center space-x-3 w-full min-w-0 relative z-10">
                             <motion.div 
                               className="flex-shrink-0"
-                              whileHover={{ rotate: 360 }}
-                              transition={{ duration: 0.5 }}
                             >
                               {room.is_private ? (
                                 <Lock className="h-4 w-4 text-amber-500" />
@@ -258,7 +285,6 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
                                 </div>
                                 <motion.div 
                                   className="flex items-center text-xs text-muted-foreground flex-shrink-0"
-                                  whileHover={{ scale: 1.1 }}
                                 >
                                   <Users className="h-3 w-3 mr-1" />
                                   {room.member_count || 0}
@@ -290,7 +316,6 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
       {/* 底部个人信息按钮 */}
       <div className="p-3 border-t">
         <motion.div
-          whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
           <Button
@@ -301,8 +326,6 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
             <div className="flex items-center space-x-3 w-full">
               <motion.div
                 className="flex-shrink-0"
-                whileHover={{ scale: 1.1 }}
-                transition={{ duration: 0.2 }}
               >
                 {user ? (
                   <Avatar className="h-8 w-8">
@@ -376,9 +399,15 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
             onSubmit={async (password) => {
               try {
                 await joinRoom(pendingRoom.id, password);
-                onRoomSelect(pendingRoom);
+                // 成功加入房间后，直接通知父组件进入房间（不需要再次加入）
+                onRoomSelect(pendingRoom, true);
                 setShowPasswordPrompt(false);
                 setPendingRoom(null);
+                
+                // 重新加载房间列表以更新用户房间状态
+                setTimeout(() => {
+                  loadRooms();
+                }, 500);
               } catch (err) {
                 console.error('Password error:', err);
                 toast.error('密码错误或无法加入该房间');

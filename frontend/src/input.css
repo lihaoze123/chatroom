@@ -87,6 +87,9 @@
 [data-radix-scroll-area-viewport] {
   scrollbar-width: thin;
   scrollbar-color: hsl(var(--border)) transparent;
+  /* 确保viewport能够滚动 */
+  overflow-y: auto !important;
+  overflow-x: hidden;
 }
 
 /* 为 ScrollArea 添加更好的滚动条样式 */
@@ -112,6 +115,25 @@
 
 [data-radix-scroll-area-thumb]:hover {
   background: hsl(var(--border) / 0.8);
+}
+
+/* ScrollArea根元素样式 */
+[data-radix-scroll-area-root] {
+  position: relative;
+  overflow: hidden;
+  /* 确保ScrollArea有正确的高度 */
+  height: 100%;
+}
+
+/* 消息列表专用的ScrollArea样式 */
+.message-list-container [data-radix-scroll-area-root] {
+  flex: 1;
+  min-height: 0;
+}
+
+.message-list-container [data-radix-scroll-area-viewport] {
+  height: 100%;
+  width: 100%;
 }
 
 /* 防止消息越界的额外样式 */
@@ -322,4 +344,138 @@ body {
     width: 1.75rem;
     height: 1.75rem;
   }
+}
+
+/* 个人资料页面样式 */
+.profile-page {
+  /* 输入框图标样式 */
+  .input-with-icon {
+    position: relative;
+  }
+  
+  .input-with-icon .icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: hsl(var(--muted-foreground));
+    pointer-events: none;
+  }
+  
+  .input-with-icon input {
+    padding-left: 2.5rem;
+  }
+}
+
+/* 个人资料卡片阴影效果 */
+.profile-card {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.3s ease;
+}
+
+.profile-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* 暗色模式下的卡片阴影 */
+.dark .profile-card {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.dark .profile-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+}
+
+/* 表单标签样式优化 */
+.form-section-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+  margin-bottom: 1rem;
+}
+
+/* 响应式网格间距 */
+@media (max-width: 768px) {
+  .profile-grid {
+    gap: 1rem;
+  }
+}
+
+/* 头像上传按钮动画 */
+.avatar-upload-button {
+  transition: all 0.2s ease;
+}
+
+.avatar-upload-button:hover {
+  transform: scale(1.05);
+}
+
+/* 编辑模式下的输入框样式 */
+input:not(:disabled):focus,
+textarea:not(:disabled):focus,
+select:not(:disabled):focus {
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1);
+}
+
+/* 性别选择框样式优化 */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: 2.5rem;
+}
+
+/* 禁用状态下的选择框 */
+select:disabled {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+}
+
+/* 移动端按钮组优化 */
+@media (max-width: 640px) {
+  .button-group {
+    display: flex;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  
+  .button-group button {
+    flex: 1;
+  }
+}
+
+/* 加载状态动画优化 */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* 个人简介文本样式 */
+.bio-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.6;
+}
+
+/* 日期输入框样式优化 */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* 禁用状态下的日期选择器 */
+input[type="date"]:disabled::-webkit-calendar-picker-indicator {
+  display: none;
 } 

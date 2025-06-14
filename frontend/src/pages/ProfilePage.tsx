@@ -9,7 +9,8 @@ import { Label } from '../components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import AvatarUpload from '../components/ui/avatar-upload';
 import { Separator } from '../components/ui/separator';
-import { ArrowLeft, Save, User as UserIcon, Mail, MapPin, Briefcase, Calendar, LogOut } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { ArrowLeft, Save, User as UserIcon, Mail, MapPin, Briefcase, Calendar, LogOut, Edit2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { authAPI } from '../services/api';
 import { User } from '../types';
@@ -55,7 +56,17 @@ const ProfilePage: React.FC = () => {
     
     setLoading(true);
     try {
-      const updatedUser = await authAPI.updateUser(formData);
+      // 过滤掉空字符串和null值，只发送有效数据
+      const filteredData: Partial<User> = {};
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value !== '' && value !== null && value !== undefined) {
+          (filteredData as any)[key] = value;
+        }
+      });
+      
+      console.log('🔍 前端发送的数据:', filteredData);
+      
+      const updatedUser = await authAPI.updateUser(filteredData);
       updateUser(updatedUser);
       setIsEditing(false);
       toast.success('个人信息更新成功！');
@@ -107,35 +118,51 @@ const ProfilePage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-background">
+      <div className="container max-w-6xl mx-auto px-4 py-6 md:py-8">
         {/* 顶部导航 */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between mb-6"
+          className="flex items-center justify-between mb-6 md:mb-8"
         >
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-2 md:gap-4">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate('/chat')}
+              className="h-9 w-9 md:h-10 md:w-10"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />
             </Button>
-            <h1 className="text-2xl font-bold">个人资料</h1>
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">个人资料</h1>
           </div>
           
           {!isEditing ? (
-            <Button onClick={() => setIsEditing(true)}>
+            <Button 
+              onClick={() => setIsEditing(true)}
+              size="sm"
+              className="md:size-default"
+            >
+              <Edit2 className="h-4 w-4 mr-2" />
               编辑资料
             </Button>
           ) : (
-            <div className="flex space-x-2">
-              <Button variant="outline" onClick={handleCancel}>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={handleCancel}
+                size="sm"
+                className="md:size-default"
+              >
                 取消
               </Button>
-              <Button onClick={handleSave} disabled={loading}>
+              <Button 
+                onClick={handleSave} 
+                disabled={loading}
+                size="sm"
+                className="md:size-default"
+              >
                 {loading ? (
                   <div className="flex items-center">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div>
@@ -152,75 +179,93 @@ const ProfilePage: React.FC = () => {
           )}
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
           {/* 左侧头像和基本信息 */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
+            className="lg:col-span-4"
           >
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex flex-col items-center text-center">
-                  <AvatarUpload 
-                    user={user}
-                    onAvatarUpdate={(updatedUser) => {
-                      updateUser(updatedUser);
-                      // 只在非编辑模式下更新formData，避免覆盖用户正在编辑的数据
-                      if (!isEditing) {
-                        setFormData({
-                          username: updatedUser.username || '',
-                          email: updatedUser.email || '',
-                          address: updatedUser.address || '',
-                          bio: updatedUser.bio || '',
-                          gender: updatedUser.gender || '',
-                          birthday: updatedUser.birthday || '',
-                          occupation: updatedUser.occupation || '',
-                          avatar_url: updatedUser.avatar_url || ''
-                        });
-                      } else {
-                        // 在编辑模式下，只更新avatar_url字段
-                        setFormData(prev => ({
-                          ...prev,
-                          avatar_url: updatedUser.avatar_url || ''
-                        }));
-                      }
-                    }}
-                    size="lg"
-                    showUploadButton={true}
-                  />
-                  
-                  <h2 className="text-xl font-semibold mb-2">
-                    {user.username}
-                  </h2>
-                  
-                  <p className="text-muted-foreground mb-4">
-                    @{user.username}
-                  </p>
-                  
-                  {user.bio && (
-                    <p className="text-sm text-muted-foreground">
-                      {user.bio}
-                    </p>
-                  )}
-                  
-                  <Separator className="my-4" />
-                  
-                  <div className="text-sm text-muted-foreground">
-                    <p>加入时间</p>
-                    <p>{new Date(user.created_at).toLocaleDateString()}</p>
+            <Card className="overflow-hidden">
+              <CardContent className="p-6 md:p-8">
+                <div className="flex flex-col items-center text-center space-y-6">
+                  {/* 头像区域 */}
+                  <div className="relative">
+                    <AvatarUpload 
+                      user={user}
+                      onAvatarUpdate={(updatedUser) => {
+                        updateUser(updatedUser);
+                        if (!isEditing) {
+                          setFormData({
+                            username: updatedUser.username || '',
+                            email: updatedUser.email || '',
+                            address: updatedUser.address || '',
+                            bio: updatedUser.bio || '',
+                            gender: updatedUser.gender || '',
+                            birthday: updatedUser.birthday || '',
+                            occupation: updatedUser.occupation || '',
+                            avatar_url: updatedUser.avatar_url || ''
+                          });
+                        } else {
+                          setFormData(prev => ({
+                            ...prev,
+                            avatar_url: updatedUser.avatar_url || ''
+                          }));
+                        }
+                      }}
+                      size="lg"
+                      showUploadButton={true}
+                    />
                   </div>
                   
-                  <Separator className="my-4" />
+                  {/* 用户名和标识 */}
+                  <div className="space-y-1">
+                    <h2 className="text-xl md:text-2xl font-bold text-foreground">
+                      {user.username}
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      @{user.username}
+                    </p>
+                  </div>
+                  
+                  {/* 个人简介 */}
+                  {user.bio && (
+                    <div className="w-full max-w-xs">
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        {user.bio}
+                      </p>
+                    </div>
+                  )}
+                  
+                  <Separator className="w-full" />
+                  
+                  {/* 加入时间 */}
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <Calendar className="h-4 w-4 flex-shrink-0" />
+                    <div className="text-left">
+                      <p className="font-medium">加入时间</p>
+                      <p className="text-xs">
+                        {new Date(user.created_at).toLocaleDateString('zh-CN', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <Separator className="w-full" />
                   
                   {/* 退出登录按钮 */}
                   <Button
                     variant="destructive"
                     onClick={handleLogout}
-                    className="flex items-center space-x-2 w-full"
+                    className="w-full"
+                    size="sm"
                   >
-                    <LogOut className="h-4 w-4" />
-                    <span>退出登录</span>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    退出登录
                   </Button>
                 </div>
               </CardContent>
@@ -232,126 +277,137 @@ const ProfilePage: React.FC = () => {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
-            className="lg:col-span-2"
+            className="lg:col-span-8"
           >
             <Card>
-              <CardHeader>
-                <CardTitle>详细信息</CardTitle>
+              <CardHeader className="pb-4 md:pb-6">
+                <CardTitle className="text-lg md:text-xl">详细信息</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-6 md:space-y-8">
                 {/* 基本信息 */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="username">用户名</Label>
-                    <div className="flex items-center space-x-2">
-                      <UserIcon className="h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="username"
-                        value={formData.username}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('username', e.target.value)}
-                        disabled={!isEditing}
-                      />
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-4">基本信息</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="username" className="text-sm">用户名</Label>
+                      <div className="relative">
+                        <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="username"
+                          value={formData.username}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('username', e.target.value)}
+                          disabled={!isEditing}
+                          className="pl-10"
+                        />
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="email">邮箱</Label>
-                    <div className="flex items-center space-x-2">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('email', e.target.value)}
-                        disabled={!isEditing}
-                      />
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-sm">邮箱</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="email"
+                          type="email"
+                          value={formData.email}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('email', e.target.value)}
+                          disabled={!isEditing}
+                          className="pl-10"
+                        />
+                      </div>
                     </div>
-                  </div>
-                  
-
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="gender">性别</Label>
-                    <select
-                      id="gender"
-                      value={formData.gender}
-                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleInputChange('gender', e.target.value)}
-                      disabled={!isEditing}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <option value="">请选择</option>
-                      <option value="male">男</option>
-                      <option value="female">女</option>
-                      <option value="other">其他</option>
-                    </select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="birthday">生日</Label>
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="birthday"
-                        type="date"
-                        value={formData.birthday}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('birthday', e.target.value)}
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="gender" className="text-sm">性别</Label>
+                      <Select
+                        value={formData.gender}
+                        onValueChange={(value: string) => handleInputChange('gender', value)}
                         disabled={!isEditing}
-                      />
+                      >
+                        <SelectTrigger id="gender">
+                          <SelectValue placeholder="请选择" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="male">男</SelectItem>
+                          <SelectItem value="female">女</SelectItem>
+                          <SelectItem value="other">其他</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="birthday" className="text-sm">生日</Label>
+                      <div className="relative">
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="birthday"
+                          type="date"
+                          value={formData.birthday}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('birthday', e.target.value)}
+                          disabled={!isEditing}
+                          className="pl-10"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
                 
                 <Separator />
                 
-                {/* 联系信息 */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="address">地址</Label>
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="address"
-                        value={formData.address}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('address', e.target.value)}
+                {/* 其他信息 */}
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-4">其他信息</h3>
+                  <div className="space-y-4 md:space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="address" className="text-sm">地址</Label>
+                        <div className="relative">
+                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="address"
+                            value={formData.address}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('address', e.target.value)}
+                            disabled={!isEditing}
+                            placeholder="请输入地址"
+                            className="pl-10"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="occupation" className="text-sm">职业</Label>
+                        <div className="relative">
+                          <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="occupation"
+                            value={formData.occupation}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('occupation', e.target.value)}
+                            disabled={!isEditing}
+                            placeholder="请输入职业"
+                            className="pl-10"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="bio" className="text-sm">个人简介</Label>
+                      <Textarea
+                        id="bio"
+                        value={formData.bio}
+                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInputChange('bio', e.target.value)}
                         disabled={!isEditing}
-                        placeholder="请输入地址"
+                        placeholder="介绍一下自己..."
+                        rows={4}
+                        className="resize-none"
                       />
                     </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="occupation">职业</Label>
-                    <div className="flex items-center space-x-2">
-                      <Briefcase className="h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="occupation"
-                        value={formData.occupation}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('occupation', e.target.value)}
-                        disabled={!isEditing}
-                        placeholder="请输入职业"
-                      />
-                    </div>
-                  </div>
-                  
-
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="bio">个人简介</Label>
-                    <Textarea
-                      id="bio"
-                      value={formData.bio}
-                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInputChange('bio', e.target.value)}
-                      disabled={!isEditing}
-                      placeholder="介绍一下自己..."
-                      rows={4}
-                    />
                   </div>
                 </div>
               </CardContent>
             </Card>
           </motion.div>
         </div>
-
       </div>
     </div>
   );

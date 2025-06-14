@@ -71,11 +71,12 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, isOpen, onC
     if (process.env.NODE_ENV === 'production' || window.location.hostname !== 'localhost') {
       const protocol = window.location.protocol;
       const hostname = window.location.hostname;
-      return `${protocol}//${hostname}:5000`;
-    }
-    
-    // 开发环境默认使用localhost
-    return 'http://localhost:5000';
+          // 改为FastAPI端口8000
+    return `${protocol}//${hostname}:8000`;
+  }
+  
+  // 开发环境默认使用localhost:8000
+  return 'http://localhost:8000';
   };
 
   return (

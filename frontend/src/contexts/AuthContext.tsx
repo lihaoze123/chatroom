@@ -52,11 +52,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const checkAuth = useCallback(async () => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
+      
+      // 检查是否有token
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        dispatch({ type: 'SET_USER', payload: null });
+        dispatch({ type: 'SET_AUTHENTICATED', payload: false });
+        return;
+      }
+      
       const user = await authAPI.getCurrentUser();
       dispatch({ type: 'SET_USER', payload: user });
       dispatch({ type: 'SET_AUTHENTICATED', payload: true });
     } catch (error: any) {
       console.error('Auth check failed:', error.response?.status, error.message);
+      // 清除无效token
+      localStorage.removeItem('access_token');
       dispatch({ type: 'SET_USER', payload: null });
       dispatch({ type: 'SET_AUTHENTICATED', payload: false });
     } finally {
@@ -73,22 +84,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       dispatch({ type: 'SET_LOADING', payload: true });
       const response = await authAPI.login(data);
       
-      // 登录接口返回用户信息，直接使用，避免额外的 API 调用
-      if (response && response.user) {
-        dispatch({ type: 'SET_USER', payload: response.user });
-        toast.success('登录成功！');
-        return true;
-      } else {
-        // 如果登录接口没有返回用户信息（不太可能），则调用 getCurrentUser
-        console.warn('登录接口未返回用户信息，正在获取用户信息...');
-        const user = await authAPI.getCurrentUser();
-        dispatch({ type: 'SET_USER', payload: user });
-        toast.success('登录成功！');
-        return true;
-      }
+      // 获取用户信息
+      const user = await authAPI.getCurrentUser();
+      dispatch({ type: 'SET_USER', payload: user });
+      toast.success('登录成功！');
+      return true;
     } catch (error: any) {
       console.error('Login error:', error);
-      toast.error(error.response?.data?.message || '登录失败，请检查用户名和密码');
+      // FastAPI错误格式适配
+      const errorMessage = error.response?.data?.detail || error.response?.data?.message || '登录失败，请检查用户名和密码';
+      toast.error(errorMessage);
       dispatch({ type: 'SET_LOADING', payload: false });
       return false;
     }
@@ -103,13 +108,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return true;
     } catch (error: any) {
       console.error('Register error:', error);
+      // FastAPI错误格式适配
       const errorData = error.response?.data;
       let errorMessage = '注册失败，请重试';
       
-      if (errorData?.error) {
-        errorMessage = errorData.error;
+      if (errorData?.detail) {
+        errorMessage = errorData.detail;
       } else if (errorData?.message) {
         errorMessage = errorData.message;
+      } else if (errorData?.error) {
+        errorMessage = errorData.error;
       }
       
       toast.error(errorMessage);

@@ -1,0 +1,79 @@
+services:
+  # 聊天室应用 - 生产环境配置
+  chatroom:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:8000"
+    environment:
+      - DEBUG=false
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DATABASE_URL=postgresql://chatroom:${POSTGRES_PASSWORD}@postgres:5432/chatroom
+      - SECRET_KEY=${SECRET_KEY}
+      - LOG_LEVEL=WARNING
+      - CORS_ORIGINS=["http://localhost", "https://yourdomain.com"]
+    volumes:
+      # 持久化上传文件
+      - chatroom_uploads:/app/uploads
+      # 持久化日志文件
+      - chatroom_logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/app/scripts/healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # PostgreSQL 数据库 - 生产环境配置
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=chatroom
+      - POSTGRES_USER=chatroom
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chatroom"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  # Nginx 反向代理 (可选)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - chatroom
+    restart: unless-stopped
+    profiles:
+      - nginx
+
+volumes:
+  postgres_data:
+  chatroom_uploads:
+  chatroom_logs: 

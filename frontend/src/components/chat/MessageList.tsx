@@ -26,11 +26,12 @@ const getAPIBaseURL = (): string => {
   if (process.env.NODE_ENV === 'production' || window.location.hostname !== 'localhost') {
     const protocol = window.location.protocol;
     const hostname = window.location.hostname;
-    return `${protocol}//${hostname}:5000`;
+    // 改为FastAPI端口8000
+    return `${protocol}//${hostname}:8000`;
   }
   
-  // 开发环境默认使用localhost
-  return 'http://localhost:5000';
+  // 开发环境默认使用localhost:8000
+  return 'http://localhost:8000';
 };
 
 const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
@@ -48,7 +49,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
   const safeTypingUsers = Array.isArray(typingUsers) ? typingUsers : [];
 
   // 渲染消息内容
-  const renderMessageContent = (message: Message) => {
+  const renderMessageContent = (message: Message, isOwnMessage: boolean) => {
     if (message.message_type === 'image' || message.message_type === 'file') {
       try {
         const fileInfo = JSON.parse(message.content);
@@ -58,7 +59,9 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
           return (
             <div className="space-y-2">
               {fileInfo.description && (
-                <div className="text-sm text-gray-800 dark:text-gray-200 break-words whitespace-pre-wrap">
+                <div className={`text-sm break-words whitespace-pre-wrap ${
+                  isOwnMessage ? 'text-primary-foreground' : 'text-foreground'
+                }`}>
                   {fileInfo.description}
                 </div>
               )}
@@ -85,7 +88,9 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
           return (
             <div className="space-y-2">
               {fileInfo.description && (
-                <div className="text-sm text-gray-800 dark:text-gray-200 break-words whitespace-pre-wrap">
+                <div className={`text-sm break-words whitespace-pre-wrap ${
+                  isOwnMessage ? 'text-primary-foreground' : 'text-foreground'
+                }`}>
                   {fileInfo.description}
                 </div>
               )}
@@ -119,7 +124,9 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
       } catch (error) {
         console.error('解析文件信息失败:', error);
         return (
-          <div className="text-sm text-gray-800 dark:text-gray-200 break-words whitespace-pre-wrap">
+          <div className={`text-sm break-words whitespace-pre-wrap ${
+            isOwnMessage ? 'text-primary-foreground' : 'text-foreground'
+          }`}>
             {message.content}
           </div>
         );
@@ -128,7 +135,9 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
     
     // 默认文本消息
     return (
-      <div className="text-sm text-gray-800 dark:text-gray-200 break-words whitespace-pre-wrap">
+      <div className={`text-sm break-words whitespace-pre-wrap ${
+        isOwnMessage ? 'text-primary-foreground' : 'text-foreground'
+      }`}>
         {message.content}
       </div>
     );
@@ -148,10 +157,23 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
         const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
         setShowScrollButton(!isNearBottom);
         
+        // 添加调试信息
+        console.log('Scroll info:', {
+          scrollTop,
+          scrollHeight,
+          clientHeight,
+          isNearBottom,
+          canScroll: scrollHeight > clientHeight
+        });
+        
         if (isNearBottom) {
           setUnreadCount(0);
         }
+      } else {
+        console.log('Viewport not found');
       }
+    } else {
+      console.log('ScrollArea ref not found');
     }
   }, []);
 
@@ -195,6 +217,17 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
       const timer = setTimeout(() => {
         scrollToBottom();
         checkScrollPosition();
+        
+        // 检查ScrollArea是否正常工作
+        const scrollArea = scrollAreaRef.current;
+        if (scrollArea) {
+          const viewport = scrollArea.querySelector('[data-radix-scroll-area-viewport]');
+          if (viewport) {
+            console.log('ScrollArea initialized successfully');
+            console.log('Viewport element:', viewport);
+            console.log('Viewport styles:', window.getComputedStyle(viewport));
+          }
+        }
       }, 150);
       
       return () => clearTimeout(timer);
@@ -239,7 +272,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 message-list-container relative">
-      <ScrollArea ref={scrollAreaRef} className="flex-1 p-3 sm:p-4">
+      <ScrollArea ref={scrollAreaRef} className="flex-1 p-3 sm:p-4" style={{ height: '100%' }}>
         {safeMessages.length === 0 ? (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -335,24 +368,40 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
                           )}
                           
                           {/* 消息气泡 */}
-                          <motion.div
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            transition={{ 
-                              delay: 0.1,
-                              type: "spring",
-                              stiffness: 400,
-                              damping: 25
-                            }}
-                            whileHover={{ scale: 1.02 }}
-                            className={`px-3 sm:px-4 py-2 rounded-2xl message-bubble ${
-                              isOwnMessage
-                                ? 'bg-primary text-primary-foreground rounded-br-md'
-                                : 'bg-muted text-foreground rounded-bl-md'
-                            }`}
-                          >
-                            {renderMessageContent(message)}
-                          </motion.div>
+                          {message.message_type === 'image' || message.message_type === 'file' ? (
+                            // 文件和图片不使用气泡
+                            <motion.div
+                              initial={{ scale: 0.8, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              transition={{ 
+                                delay: 0.1,
+                                type: "spring",
+                                stiffness: 400,
+                                damping: 25
+                              }}
+                            >
+                              {renderMessageContent(message, isOwnMessage)}
+                            </motion.div>
+                          ) : (
+                            // 文本消息使用气泡
+                            <motion.div
+                              initial={{ scale: 0.8, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              transition={{ 
+                                delay: 0.1,
+                                type: "spring",
+                                stiffness: 400,
+                                damping: 25
+                              }}
+                              className={`px-3 sm:px-4 py-2 rounded-2xl message-bubble ${
+                                isOwnMessage
+                                  ? 'bg-primary text-primary-foreground rounded-br-md'
+                                  : 'bg-muted text-foreground rounded-bl-md'
+                              }`}
+                            >
+                              {renderMessageContent(message, isOwnMessage)}
+                            </motion.div>
+                          )}
                           
                           {/* 消息时间 */}
                           <motion.div 
@@ -452,7 +501,6 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
             className="absolute bottom-4 right-4 z-10"
           >
             <motion.div
-              whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
             >
               <Button

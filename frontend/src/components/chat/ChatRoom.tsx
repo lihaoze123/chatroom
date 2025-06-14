@@ -117,8 +117,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeaveRoom }) => {
             <div className="flex items-center space-x-2 min-w-0">
               <SimpleTooltip content="聊天室频道">
                 <motion.div
-                  whileHover={{ rotate: 360, scale: 1.2 }}
-                  transition={{ duration: 0.5 }}
                   className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center"
                 >
                   <Hash className="h-4 w-4 text-primary flex-shrink-0" />
@@ -160,7 +158,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeaveRoom }) => {
             {/* 在线用户数 */}
             <SimpleTooltip content="查看在线用户">
               <motion.div
-                whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
                 <Button
@@ -192,7 +189,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeaveRoom }) => {
             {/* 设置按钮 - 桌面端显示 */}
             <SimpleTooltip content="聊天室设置">
               <motion.div
-                whileHover={{ scale: 1.1, rotate: 90 }}
                 whileTap={{ scale: 0.95 }}
               >
                 <Button
@@ -208,7 +204,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeaveRoom }) => {
             {/* 退出登录 */}
             <SimpleTooltip content="退出聊天室">
               <motion.div
-                whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
               >
                 <Button
@@ -256,7 +251,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeaveRoom }) => {
           <div className="flex items-center space-x-1">
             {/* 在线用户数 */}
             <motion.div
-              whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
               <Button
@@ -286,7 +280,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeaveRoom }) => {
 
             {/* 退出登录 */}
             <motion.div
-              whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
             >
               <Button
@@ -308,14 +301,10 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeaveRoom }) => {
       <CardContent className="flex-1 p-0 flex relative overflow-hidden min-h-0">
         {/* 消息区域 */}
         <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden relative">
-          <div className="flex-1 overflow-hidden relative">
-            <MessageList 
-              messages={messages} 
-              typingUsers={typingUsers}
-            />
-            
-            {/* 滚动到底部按钮 - 暂时隐藏，等待MessageList支持滚动检测 */}
-          </div>
+          <MessageList 
+            messages={messages} 
+            typingUsers={typingUsers}
+          />
           
           <MessageInput 
             onSendMessage={handleSendMessage}

@@ -1,14 +1,16 @@
 # 实时 Web 聊天应用
 
-一个基于 **Flask** 和 **WebSocket (Flask-SocketIO)** 构建的现代实时 Web 聊天应用。
+一个基于 **FastAPI** 和 **WebSocket (Socket.IO)** 构建的现代实时 Web 聊天应用。
+
+> **🚀 重要更新**: 本项目已从Flask成功迁移到FastAPI！享受更高的性能、自动API文档生成和现代异步支持。详细迁移信息请查看 [FASTAPI_MIGRATION.md](FASTAPI_MIGRATION.md) 和 [FRONTEND_MIGRATION_SUMMARY.md](FRONTEND_MIGRATION_SUMMARY.md)。
 
 ## 技术栈
 
 - [Python](https://www.python.org/)
-- [Flask](https://flask.palletsprojects.com/)
-- [Flask-SocketIO](https://flask-socketio.readthedocs.io/en/latest/)
-- [Flask-SQLAlchemy](https://flask-sqlalchemy.palletsprojects.com/)
-- [Flask-Login](https://flask-login.readthedocs.io/en/latest/)
+- [FastAPI](https://fastapi.tiangolo.com/)
+- [Socket.IO](https://socket.io/)
+- [SQLAlchemy](https://www.sqlalchemy.org/)
+- [JWT](https://jwt.io/) - JSON Web Token认证
 
 ## 📖 项目简介
 
@@ -26,18 +28,21 @@
   * ✅ **富媒体支持**: 支持发送表情符号和文件上传（图片、文档等）。
   * ✅ **浏览器通知**: 当应用在后台时，通过浏览器桌面通知提醒新消息。
   * ✅ **文件上传**: 支持图片和文档文件的安全上传与分享。
+  * ✅ **自动API文档**: FastAPI自动生成交互式API文档（Swagger UI）。
+  * ✅ **高性能**: 基于Starlette和Pydantic，提供出色的性能表现。
+  * ✅ **类型安全**: 完整的类型提示和自动数据验证。
 
 ## 🛠️ 技术栈
 
 ### 后端
-  * **Flask 3.1.1+** - Web框架
-  * **Flask-SocketIO 5.5.1+** - WebSocket支持
-  * **Flask-SQLAlchemy 3.1.1+** - ORM数据库操作
-  * **Flask-Login 0.6.3+** - 用户认证
-  * **Flask-CORS 6.0.0+** - 跨域资源共享
-  * **Flask-WTF 1.2.2+** - 表单处理和CSRF保护
+  * **FastAPI 0.115.6+** - 现代高性能Web框架
+  * **Socket.IO 5.11.4+** - WebSocket实时通信
+  * **SQLAlchemy 2.0+** - 现代ORM数据库操作
+  * **JWT (PyJWT)** - JSON Web Token认证
+  * **Pydantic 2.0+** - 数据验证和序列化
+  * **Uvicorn** - ASGI服务器
   * **SQLite** - 数据库（开发环境）
-  * **Eventlet 0.40.0+** - 异步服务器
+  * **Asyncio** - 原生异步支持
 
 ### 前端
   * **React 19.1.0** - 用户界面库
@@ -122,7 +127,9 @@ npm run build-css-once
 **启动后端服务器：**
 ```bash
 # 在项目根目录
-python run.py
+python main.py
+# 或使用 uvicorn
+uvicorn main:socket_app --host 0.0.0.0 --port 8000 --reload
 ```
 
 **启动前端开发服务器：**
@@ -139,7 +146,9 @@ npm run start:network
 
 ### 5\. 访问应用
 
-- **本地访问**：`http://localhost:3000`
+- **前端应用**：`http://localhost:3000`
+- **API文档**：`http://localhost:8000/docs` (Swagger UI)
+- **备用API文档**：`http://localhost:8000/redoc` (ReDoc)
 - **局域网访问**：`http://[服务器IP]:3000`（例如：`http://192.168.1.100:3000`）
 
 ## 🌐 局域网访问配置
@@ -150,9 +159,9 @@ npm run start:network
 
 1. **启动后端服务器**：
    ```bash
-   python run.py
+   python main.py
    ```
-   后端会自动绑定到 `0.0.0.0:5000`，支持局域网访问。
+   后端会自动绑定到 `0.0.0.0:8000`，支持局域网访问。
 
 2. **启动前端服务器（支持局域网访问）**：
    ```bash
@@ -163,7 +172,7 @@ npm run start:network
 3. **从局域网设备访问**：
    - 获取服务器IP地址（如 `192.168.1.100`）
    - 在其他设备上访问：`http://192.168.1.100:3000`
-   - 前端会自动检测并使用 `http://192.168.1.100:5000` 作为API地址
+   - 前端会自动检测并使用 `http://192.168.1.100:8000` 作为API地址
 
 ### 手动配置
 
@@ -175,8 +184,8 @@ npm run start:network
    cd frontend
    cat > .env << EOF
    # 替换为实际的服务器IP地址
-   REACT_APP_API_URL=http://192.168.1.100:5000
-   REACT_APP_SOCKET_URL=http://192.168.1.100:5000
+   REACT_APP_API_URL=http://192.168.1.100:8000
+   REACT_APP_SOCKET_URL=http://192.168.1.100:8000
    EOF
    ```
 
@@ -303,7 +312,7 @@ ipconfig
 **解决方案**：
 - 确认前端服务器使用 `npm run start:network` 启动
 - 检查服务器IP地址是否正确
-- 确认防火墙允许3000和5000端口的入站连接
+- 确认防火墙允许3000和8000端口的入站连接
 - 验证设备间网络连通性：`ping [服务器IP]`
 
 #### 4. 前端样式不显示
@@ -353,9 +362,9 @@ ipconfig
 
 1. **后端调试**：
    ```bash
-   export FLASK_ENV=development
+   export DEBUG=true
    export LOG_LEVEL=DEBUG
-   python run.py
+   python main.py
    ```
 
 2. **前端调试**：
@@ -367,12 +376,18 @@ ipconfig
 
 1. **检查API连接**：
    ```bash
-   curl -X GET http://localhost:5000/api/auth/check
+   curl -X GET http://localhost:8000/api/auth/me
    ```
 
 2. **检查Socket.IO连接**：
    ```bash
-   curl -X GET "http://localhost:5000/socket.io/?EIO=4&transport=polling"
+   curl -X GET "http://localhost:8000/socket.io/?EIO=4&transport=polling"
+   ```
+
+3. **查看API文档**：
+   ```bash
+   # 在浏览器中访问
+   http://localhost:8000/docs
    ```
 
 3. **验证前端配置**：
@@ -391,16 +406,15 @@ ipconfig
 
 2. **配置环境变量**：
    ```bash
-   export FLASK_ENV=production
+   export DEBUG=false
    export SECRET_KEY=your-secret-key
    export DATABASE_URL=your-database-url
    ```
 
 3. **使用生产服务器**：
    ```bash
-   # 使用 Gunicorn
-   pip install gunicorn
-   gunicorn -k eventlet -w 1 --bind 0.0.0.0:5000 run:app
+   # 使用 Uvicorn
+   uvicorn main:socket_app --host 0.0.0.0 --port 8000 --workers 4
    ```
 
 #### 数据库优化
@@ -452,19 +466,33 @@ ipconfig
 
 ## 📁 项目结构
 
-项目采用模块化的蓝图（Blueprint）结构，保持代码的整洁和高可维护性。
+项目采用现代化的FastAPI模块结构，保持代码的整洁和高可维护性。
 
 ```
 chatroom/
-├── app/                      # 后端应用核心代码
-│   ├── __init__.py           # 应用工厂和 Blueprint 注册
-│   ├── api/                  # API Blueprint (为前端提供接口)
+├── app/                      # FastAPI应用核心代码
+│   ├── __init__.py           # 应用初始化
+│   ├── config.py             # 配置管理
+│   ├── database.py           # 数据库连接
+│   ├── models.py             # SQLAlchemy 数据库模型
+│   ├── schemas/              # Pydantic模式定义
+│   │   ├── __init__.py
+│   │   ├── user.py           # 用户模式
+│   │   ├── room.py           # 房间模式
+│   │   └── message.py        # 消息模式
+│   ├── api/                  # API路由
 │   │   ├── __init__.py
 │   │   ├── auth.py           # 认证API
-│   │   └── chat.py           # 聊天API
-│   ├── models.py             # SQLAlchemy 数据库模型
-│   ├── socket_events.py      # Socket.IO 事件处理器
-│   └── utils.py              # 工具函数
+│   │   ├── rooms.py          # 房间API
+│   │   ├── messages.py       # 消息API
+│   │   └── upload.py         # 文件上传API
+│   ├── core/                 # 核心功能
+│   │   ├── __init__.py
+│   │   ├── security.py       # 安全相关（JWT等）
+│   │   └── deps.py           # 依赖注入
+│   └── socket/               # Socket.IO事件处理
+│       ├── __init__.py
+│       └── events.py         # Socket事件处理器
 ├── frontend/                 # React前端应用
 │   ├── public/               # 静态资源
 │   ├── src/                  # 源代码
@@ -490,15 +518,15 @@ chatroom/
 │   ├── package.json          # 前端依赖配置
 │   └── README.md             # 前端文档
 ├── instance/                 # 实例文件夹
-│   └── app.db               # SQLite数据库文件
+│   └── chatroom.db          # SQLite数据库文件
 ├── uploads/                  # 文件上传目录
 ├── logs/                     # 日志文件夹
 │   └── app.log              # 应用日志
-├── migrations/               # 数据库迁移文件
-├── config.py                 # 应用配置
-├── run.py                    # 应用启动脚本
+├── main.py                   # FastAPI应用启动脚本
 ├── init_db.py               # 数据库初始化脚本
 ├── pyproject.toml            # 项目定义和依赖管理
+├── FASTAPI_MIGRATION.md      # FastAPI迁移文档
+├── FRONTEND_MIGRATION_SUMMARY.md # 前端迁移总结
 └── README.md                 # 项目文档
 ```
 
@@ -598,20 +626,17 @@ interface ChatRoom {
 #### POST /api/auth/login
 用户登录
 
-**请求体：**
-```json
-{
-  "username": "string",
-  "password": "string",
-  "remember_me": "boolean"
-}
+**请求体：** `application/x-www-form-urlencoded`
+```
+username=string
+password=string
 ```
 
 **响应：**
 ```json
 {
-  "message": "欢迎回来，username！",
-  "user": User对象
+  "access_token": "string",
+  "token_type": "bearer"
 }
 ```
 
@@ -628,45 +653,88 @@ interface ChatRoom {
 }
 ```
 
-#### GET /api/auth/check
-检查用户认证状态
+#### GET /api/auth/me
+获取当前用户信息
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
 
 **响应：**
 ```json
 {
-  "authenticated": true,
-  "user": User对象
+  "id": "number",
+  "username": "string",
+  "email": "string",
+  "avatar_url": "string",
+  "is_online": "boolean",
+  "created_at": "string",
+  "last_seen": "string"
 }
 ```
 
 #### POST /api/auth/logout
 用户登出
 
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**响应：**
+```json
+{
+  "message": "成功登出"
+}
+```
+
 ### 聊天接口
 
-#### GET /api/rooms
+#### GET /api/rooms/
 获取聊天室列表
 
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
 **响应：**
 ```json
 {
-  "user_rooms": ChatRoom[],
-  "available_rooms": ChatRoom[]
+  "user_rooms": "ChatRoom[]",
+  "available_rooms": "ChatRoom[]"
 }
 ```
 
-#### GET /api/rooms/:id
+#### GET /api/rooms/{id}
 获取聊天室详情
 
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
 **响应：**
 ```json
 {
-  "room": ChatRoom对象
+  "id": "number",
+  "name": "string",
+  "description": "string",
+  "is_private": "boolean",
+  "created_at": "string",
+  "created_by": "number",
+  "member_count": "number"
 }
 ```
 
-#### POST /api/rooms
+#### POST /api/rooms/
 创建聊天室
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
 
 **请求体：**
 ```json
@@ -678,49 +746,69 @@ interface ChatRoom {
 }
 ```
 
-#### POST /api/rooms/:id/join
+#### POST /api/rooms/{id}/join
 加入聊天室（支持私密房间密码验证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
 
 **请求体：**
 ```json
 {
-  "password": "string"  // 私密房间必需
+  "password": "string"
 }
 ```
 
-#### POST /api/rooms/:id/leave
+#### POST /api/rooms/{id}/leave
 离开聊天室
 
-#### GET /api/rooms/:id/messages
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+#### GET /api/messages/{room_id}
 获取聊天室消息
 
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
 **查询参数：**
-- `page`: 页码（默认1）
-- `per_page`: 每页数量（默认50）
+- `skip`: 跳过数量（默认0）
+- `limit`: 限制数量（默认50）
 
 **响应：**
 ```json
 {
-  "messages": Message[]
+  "messages": "Message[]"
 }
 ```
 
 ### 文件上传接口
 
-#### POST /api/upload/chat
+#### POST /api/upload/
 上传聊天文件
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: multipart/form-data
+```
 
 **请求体：** FormData
 - `file`: 文件对象
-- `type`: 文件类型（'image' 或 'file'）
 
 **响应：**
 ```json
 {
-  "file_url": "string",
-  "file_name": "string",
+  "filename": "string",
+  "file_path": "string",
   "file_size": "number",
-  "file_type": "string"
+  "content_type": "string"
 }
 ```
 
@@ -755,8 +843,9 @@ interface ChatRoom {
 
 感谢所有为这个项目做出贡献的开发者和用户。特别感谢以下开源项目：
 
-- [Flask](https://flask.palletsprojects.com/) - 强大的Python Web框架
+- [FastAPI](https://fastapi.tiangolo.com/) - 现代高性能Python Web框架
 - [React](https://reactjs.org/) - 用户界面构建库
 - [Socket.IO](https://socket.io/) - 实时通信库
+- [SQLAlchemy](https://www.sqlalchemy.org/) - Python SQL工具包和ORM
 - [TailwindCSS](https://tailwindcss.com/) - 实用优先的CSS框架
 - [shadcn/ui](https://ui.shadcn.com/) - 现代化UI组件库

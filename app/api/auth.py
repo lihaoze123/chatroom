@@ -1,437 +1,213 @@
 # app/api/auth.py
 # 认证API
 
-from flask import request, jsonify, session, current_app
-from flask_login import login_user, logout_user, current_user, login_required
-from app import db
-from app.api import bp
-from app.models import User
-from app.utils import get_client_ip, log_security_event, log_user_action
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy.orm import Session
+from datetime import timedelta
 import re
-import logging
+
+from app.database import get_db
+from app.schemas.user import UserCreate, UserResponse, UserLogin, Token, UserUpdate, PasswordChange
+from app.models import User
+from app.core.deps import get_current_user
+from app.core.security import create_access_token, get_password_hash, verify_password
+from app.config import settings
+
+router = APIRouter()
 
 def validate_email(email):
     """验证邮箱格式"""
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
 
-def validate_password(password):
-    """验证密码强度"""
-    if len(password) < 6:
-        return False, "密码长度至少6个字符"
+def validate_username(username):
+    """验证用户名格式"""
+    if len(username) < 2 or len(username) > 20:
+        return False, "用户名长度必须在2-20个字符之间"
+    
+    if not re.match(r'^[\u4e00-\u9fa5a-zA-Z0-9_]+$', username):
+        return False, "用户名只能包含中文、英文字母、数字和下划线"
+    
     return True, ""
 
-@bp.route('/auth/register', methods=['POST'])
-def api_register():
-    """用户注册API"""
-    client_ip = get_client_ip()
-    current_app.logger.info(f'用户注册请求 - IP: {client_ip}')
-    
-    # 支持JSON和FormData两种格式
-    if request.is_json:
-        data = request.get_json()
-        if not data:
-            current_app.logger.warning(f'注册失败：无效的JSON数据 - IP: {client_ip}')
-            return jsonify({'error': '请提供有效的JSON数据'}), 400
-        username = data.get('username', '').strip()
-        email = data.get('email', '').strip()
-        password = data.get('password', '')
-    else:
-        # FormData格式
-        username = request.form.get('username', '').strip()
-        email = request.form.get('email', '').strip()
-        password = request.form.get('password', '')
-    
-    current_app.logger.debug(f'注册尝试 - 用户名: {username}, 邮箱: {email}, IP: {client_ip}')
-    
-    # 验证必填字段
-    if not username:
-        current_app.logger.warning(f'注册失败：缺少用户名 - IP: {client_ip}')
-        return jsonify({
-            'error': '请输入用户名',
-            'field': 'username',
-            'code': 'REQUIRED'
-        }), 400
-    if not email:
-        current_app.logger.warning(f'注册失败：缺少邮箱 - IP: {client_ip}')
-        return jsonify({
-            'error': '请输入邮箱地址',
-            'field': 'email',
-            'code': 'REQUIRED'
-        }), 400
-    if not password:
-        current_app.logger.warning(f'注册失败：缺少密码 - IP: {client_ip}')
-        return jsonify({
-            'error': '请输入密码',
-            'field': 'password',
-            'code': 'REQUIRED'
-        }), 400
-    
-    # 验证用户名长度和格式
-    if len(username) < 2 or len(username) > 20:
-        current_app.logger.warning(f'注册失败：用户名长度无效 - 用户名: {username}, 长度: {len(username)}, IP: {client_ip}')
-        return jsonify({
-            'error': '用户名长度必须在2-20个字符之间',
-            'field': 'username',
-            'code': 'INVALID_LENGTH'
-        }), 400
-    
-    # 验证用户名字符（允许中文、英文、数字、下划线）
-    import re
-    if not re.match(r'^[\u4e00-\u9fa5a-zA-Z0-9_]+$', username):
-        current_app.logger.warning(f'注册失败：用户名包含无效字符 - 用户名: {username}, IP: {client_ip}')
-        return jsonify({
-            'error': '用户名只能包含中文、英文字母、数字和下划线',
-            'field': 'username',
-            'code': 'INVALID_CHARACTERS'
-        }), 400
+@router.post("/register", response_model=UserResponse)
+async def register(user_data: UserCreate, db: Session = Depends(get_db)):
+    """用户注册"""
+    # 验证用户名格式
+    is_valid, error_msg = validate_username(user_data.username)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=error_msg
+        )
     
     # 验证邮箱格式
-    if not validate_email(email):
-        current_app.logger.warning(f'注册失败：邮箱格式无效 - 邮箱: {email}, IP: {client_ip}')
-        return jsonify({
-            'error': '请输入有效的邮箱地址',
-            'field': 'email',
-            'code': 'INVALID_FORMAT'
-        }), 400
+    if not validate_email(user_data.email):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="请输入有效的邮箱地址"
+        )
     
-    # 验证密码强度
-    is_valid, error_msg = validate_password(password)
-    if not is_valid:
-        current_app.logger.warning(f'注册失败：密码强度不足 - 用户名: {username}, IP: {client_ip}')
-        return jsonify({
-            'error': error_msg,
-            'field': 'password',
-            'code': 'INVALID_STRENGTH'
-        }), 400
+    # 检查用户名是否存在
+    if db.query(User).filter(User.username == user_data.username).first():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="该用户名已被使用，请选择其他用户名"
+        )
     
-    # 检查用户名是否已存在
-    if User.query.filter_by(username=username).first():
-        log_security_event('重复用户名注册尝试', f'用户名: {username}')
-        return jsonify({
-            'error': '该用户名已被使用，请选择其他用户名',
-            'field': 'username',
-            'code': 'ALREADY_EXISTS'
-        }), 409
+    # 检查邮箱是否存在
+    if db.query(User).filter(User.email == user_data.email).first():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="该邮箱已被注册，请使用其他邮箱或直接登录"
+        )
     
-    # 检查邮箱是否已存在
-    if User.query.filter_by(email=email).first():
-        log_security_event('重复邮箱注册尝试', f'邮箱: {email}')
-        return jsonify({
-            'error': '该邮箱已被注册，请使用其他邮箱或直接登录',
-            'field': 'email',
-            'code': 'ALREADY_EXISTS'
-        }), 409
+    # 创建用户
+    hashed_password = get_password_hash(user_data.password)
+    db_user = User(
+        username=user_data.username,
+        email=user_data.email,
+        password_hash=hashed_password
+    )
     
-    try:
-        # 创建新用户
-        user = User(username=username, email=email)
-        user.set_password(password)
-        
-        db.session.add(user)
-        db.session.commit()
-        
-        log_user_action('用户注册', user.id, f'用户名: {username}, 邮箱: {email}')
-        
-        return jsonify({
-            'message': '注册成功！',
-            'user': user.to_dict()
-        }), 201
-        
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f'注册失败：数据库错误 - 用户名: {username}, 邮箱: {email}, IP: {client_ip}, 错误: {str(e)}')
-        return jsonify({'error': '注册失败，请稍后重试'}), 500
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    
+    return db_user
 
-@bp.route('/auth/login', methods=['POST'])
-def api_login():
-    """用户登录API"""
-    client_ip = get_client_ip()
-    current_app.logger.info(f'用户登录请求 - IP: {client_ip}')
-    
-    # 支持JSON和FormData两种格式
-    if request.is_json:
-        data = request.get_json()
-        if not data:
-            current_app.logger.warning(f'登录失败：无效的JSON数据 - IP: {client_ip}')
-            return jsonify({'error': '请提供有效的JSON数据'}), 400
-        username = data.get('username', '').strip()
-        password = data.get('password', '')
-        remember_me = data.get('remember_me', False)
-    else:
-        # FormData格式
-        username = request.form.get('username', '').strip()
-        password = request.form.get('password', '')
-        remember_me = request.form.get('remember_me') == 'on'
-    
-    current_app.logger.debug(f'登录尝试 - 用户名: {username}, 记住我: {remember_me}, 密码: {password}, IP: {client_ip}')
-    
-    # 验证必填字段
-    if not username or not password:
-        current_app.logger.warning(f'登录失败：缺少必填字段 - 用户名: {username}, IP: {client_ip}')
-        return jsonify({'error': '用户名和密码都是必填项'}), 400
-    
+@router.post("/login", response_model=Token)
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    """用户登录"""
     # 查找用户
-    user = User.query.filter_by(username=username).first()
+    user = db.query(User).filter(User.username == form_data.username).first()
     
-    if not user or not user.check_password(password):
-        log_security_event('登录失败', f'用户名或密码错误 - 用户名: {username}', severity='WARNING')
-        return jsonify({'error': '用户名或密码错误'}), 401
+    if not user or not verify_password(form_data.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="用户名或密码错误",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     
-    try:
-        # 登录用户
-        login_user(user, remember=remember_me)
-        user.set_online_status(True)
-        
-        # 添加会话调试信息
-        from flask import session
-        current_app.logger.debug(f'登录成功 - 用户名: {username}, 记住我: {remember_me}, Session ID: {session.get("_id", "无")}, 用户ID: {session.get("_user_id", "无")}, IP: {client_ip}')
-        
-        response = jsonify({
-            'message': f'欢迎回来，{user.username}！',
-            'user': user.to_dict()
-        })
-        
-        # 调试响应头中的Cookie设置
-        current_app.logger.debug(f'登录响应Cookie设置: {response.headers.get("Set-Cookie", "无Cookie设置")}')
-        
-        return response, 200
-        
-    except Exception as e:
-        current_app.logger.error(f'登录失败：系统错误 - 用户名: {username}, IP: {client_ip}, 错误: {str(e)}')
-        return jsonify({'error': '登录失败，请稍后重试'}), 500
+    # 创建访问令牌
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    
+    # 更新在线状态
+    user.is_online = True
+    db.commit()
+    
+    return {"access_token": access_token, "token_type": "bearer"}
 
-@bp.route('/auth/logout', methods=['POST'])
-@login_required
-def api_logout():
-    """用户登出API"""
-    client_ip = get_client_ip()
-    user_id = current_user.id if current_user.is_authenticated else None
-    username = current_user.username if current_user.is_authenticated else None
-    
-    current_app.logger.info(f'用户登出请求 - 用户ID: {user_id}, 用户名: {username}, IP: {client_ip}')
-    
-    try:
-        if current_user.is_authenticated:
-            current_user.set_online_status(False)
-        logout_user()
-        
-        log_user_action('用户登出', user_id, f'用户名: {username}')
-        
-        return jsonify({'message': '已成功登出'}), 200
-        
-    except Exception as e:
-        current_app.logger.error(f'登出失败：系统错误 - 用户ID: {user_id}, IP: {client_ip}, 错误: {str(e)}')
-        return jsonify({'error': '登出失败'}), 500
+@router.get("/me", response_model=UserResponse)
+async def get_current_user_info(current_user: User = Depends(get_current_user)):
+    """获取当前用户信息"""
+    return current_user
 
-@bp.route('/auth/me', methods=['GET'])
-@login_required
-def api_current_user():
-    """获取当前用户信息API"""
-    client_ip = get_client_ip()
-    current_app.logger.debug(f'获取当前用户信息 - 用户ID: {current_user.id}, IP: {client_ip}')
-    
-    return jsonify({
-        'user': current_user.to_dict()
-    }), 200
+@router.post("/logout")
+async def logout(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """用户登出"""
+    current_user.is_online = False
+    db.commit()
+    return {"message": "登出成功"}
 
-@bp.route('/auth/profile', methods=['PUT'])
-@login_required
-def api_update_profile():
-    """更新用户资料API"""
-    client_ip = get_client_ip()
-    current_app.logger.info(f'更新用户资料请求 - 用户ID: {current_user.id}, IP: {client_ip}')
+@router.put("/profile", response_model=UserResponse)
+async def update_profile(
+    profile_data: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """更新用户资料"""
+    # 添加调试日志
+    print(f"🔍 收到的更新数据: {profile_data.dict(exclude_unset=True)}")
+    print(f"👤 当前用户: {current_user.username} (ID: {current_user.id})")
     
-    data = request.get_json()
-    
-    if not data:
-        current_app.logger.warning(f'更新资料失败：无效的JSON数据 - 用户ID: {current_user.id}, IP: {client_ip}')
-        return jsonify({'error': '请提供有效的JSON数据'}), 400
-    
-    username = data.get('username', '').strip()
-    email = data.get('email', '').strip()
-    avatar_url = data.get('avatar_url', '').strip()
-    real_name = data.get('real_name', '').strip()
-    phone = data.get('phone', '').strip()
-    address = data.get('address', '').strip()
-    bio = data.get('bio', '').strip()
-    gender = data.get('gender', '').strip()
-    birthday = data.get('birthday', '')
-    occupation = data.get('occupation', '').strip()
-    website = data.get('website', '').strip()
-    
-    current_app.logger.debug(f'资料更新尝试 - 用户ID: {current_user.id}, 新用户名: {username}, 新邮箱: {email}, IP: {client_ip}')
-    
-    # 验证必填字段
-    if not username:
-        current_app.logger.warning(f'更新资料失败：缺少用户名 - 用户ID: {current_user.id}, IP: {client_ip}')
-        return jsonify({
-            'error': '请输入用户名',
-            'field': 'username',
-            'code': 'REQUIRED'
-        }), 400
-    if not email:
-        current_app.logger.warning(f'更新资料失败：缺少邮箱 - 用户ID: {current_user.id}, IP: {client_ip}')
-        return jsonify({
-            'error': '请输入邮箱地址',
-            'field': 'email',
-            'code': 'REQUIRED'
-        }), 400
-    
-    # 验证用户名长度和格式
-    if len(username) < 2 or len(username) > 20:
-        current_app.logger.warning(f'更新资料失败：用户名长度无效 - 用户ID: {current_user.id}, 用户名: {username}, IP: {client_ip}')
-        return jsonify({
-            'error': '用户名长度必须在2-20个字符之间',
-            'field': 'username',
-            'code': 'INVALID_LENGTH'
-        }), 400
-    
-    # 验证用户名字符（允许中文、英文、数字、下划线）
-    if not re.match(r'^[\u4e00-\u9fa5a-zA-Z0-9_]+$', username):
-        current_app.logger.warning(f'更新资料失败：用户名包含无效字符 - 用户ID: {current_user.id}, 用户名: {username}, IP: {client_ip}')
-        return jsonify({
-            'error': '用户名只能包含中文、英文字母、数字和下划线',
-            'field': 'username',
-            'code': 'INVALID_CHARACTERS'
-        }), 400
-    
-    # 验证邮箱格式
-    if not validate_email(email):
-        current_app.logger.warning(f'更新资料失败：邮箱格式无效 - 用户ID: {current_user.id}, 邮箱: {email}, IP: {client_ip}')
-        return jsonify({
-            'error': '请输入有效的邮箱地址',
-            'field': 'email',
-            'code': 'INVALID_FORMAT'
-        }), 400
-    
-    # 检查用户名是否已被其他用户使用
-    if username != current_user.username:
-        if User.query.filter_by(username=username).first():
-            current_app.logger.warning(f'更新资料失败：用户名已存在 - 用户ID: {current_user.id}, 用户名: {username}, IP: {client_ip}')
-            return jsonify({
-                'error': '该用户名已被使用，请选择其他用户名',
-                'field': 'username',
-                'code': 'ALREADY_EXISTS'
-            }), 409
-    
-    # 检查邮箱是否已被其他用户使用
-    if email != current_user.email:
-        if User.query.filter_by(email=email).first():
-            current_app.logger.warning(f'更新资料失败：邮箱已存在 - 用户ID: {current_user.id}, 邮箱: {email}, IP: {client_ip}')
-            return jsonify({
-                'error': '该邮箱已被注册，请使用其他邮箱',
-                'field': 'email',
-                'code': 'ALREADY_EXISTS'
-            }), 409
-    
-    try:
-        # 记录原始信息
-        old_username = current_user.username
-        old_email = current_user.email
+    # 如果要更新用户名，需要验证
+    if profile_data.username and profile_data.username != current_user.username:
+        # 验证用户名格式
+        is_valid, error_msg = validate_username(profile_data.username)
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=error_msg
+            )
         
-        # 更新用户信息
-        current_user.username = username
-        current_user.email = email
-        current_user.avatar_url = avatar_url
-        current_user.real_name = real_name
-        current_user.phone = phone
-        current_user.address = address
-        current_user.bio = bio
-        current_user.gender = gender
-        current_user.occupation = occupation
-        current_user.website = website
+        # 检查用户名是否已被使用
+        existing_user = db.query(User).filter(
+            User.username == profile_data.username,
+            User.id != current_user.id
+        ).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="该用户名已被使用，请选择其他用户名"
+            )
+    
+    # 如果要更新邮箱，需要验证
+    if profile_data.email and profile_data.email != current_user.email:
+        # 验证邮箱格式
+        if not validate_email(str(profile_data.email)):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="请输入有效的邮箱地址"
+            )
         
-        # 处理生日字段
-        if birthday:
-            try:
-                from datetime import datetime
-                current_user.birthday = datetime.strptime(birthday, '%Y-%m-%d').date()
-            except ValueError:
-                current_user.birthday = None
+        # 检查邮箱是否已被使用
+        existing_user = db.query(User).filter(
+            User.email == profile_data.email,
+            User.id != current_user.id
+        ).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="该邮箱已被注册，请使用其他邮箱"
+            )
+    
+    # 更新用户信息
+    for field, value in profile_data.dict(exclude_unset=True).items():
+        if hasattr(current_user, field):
+            print(f"✅ 更新字段 {field}: {getattr(current_user, field)} -> {value}")
+            setattr(current_user, field, value)
         else:
-            current_user.birthday = None
-        
-        db.session.commit()
-        
-        log_user_action('资料更新', current_user.id, f'原用户名: {old_username} -> 新用户名: {username}, 原邮箱: {old_email} -> 新邮箱: {email}')
-        
-        return jsonify({
-            'message': '资料更新成功！',
-            'user': current_user.to_dict()
-        }), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f'更新资料失败：数据库错误 - 用户ID: {current_user.id}, IP: {client_ip}, 错误: {str(e)}')
-        return jsonify({'error': '更新失败，请稍后重试'}), 500
+            print(f"⚠️  字段 {field} 不存在于User模型中")
+    
+    db.commit()
+    db.refresh(current_user)
+    
+    print(f"✅ 用户资料更新成功")
+    return current_user
 
-@bp.route('/auth/change-password', methods=['PUT'])
-@login_required
-def api_change_password():
-    """修改密码API"""
-    client_ip = get_client_ip()
-    current_app.logger.info(f'修改密码请求 - 用户ID: {current_user.id}, IP: {client_ip}')
-    
-    data = request.get_json()
-    
-    if not data:
-        current_app.logger.warning(f'修改密码失败：无效的JSON数据 - 用户ID: {current_user.id}, IP: {client_ip}')
-        return jsonify({'error': '请提供有效的JSON数据'}), 400
-    
-    current_password = data.get('current_password', '')
-    new_password = data.get('new_password', '')
-    
-    # 验证必填字段
-    if not current_password or not new_password:
-        current_app.logger.warning(f'修改密码失败：缺少必填字段 - 用户ID: {current_user.id}, IP: {client_ip}')
-        return jsonify({'error': '当前密码和新密码都是必填项'}), 400
-    
+@router.put("/change-password")
+async def change_password(
+    password_data: PasswordChange,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """修改密码"""
     # 验证当前密码
-    if not current_user.check_password(current_password):
-        log_security_event('密码修改失败', '当前密码错误', current_user.id, 'WARNING')
-        return jsonify({'error': '当前密码错误'}), 401
+    if not verify_password(password_data.current_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="当前密码错误"
+        )
     
-    # 验证新密码强度
-    is_valid, error_msg = validate_password(new_password)
-    if not is_valid:
-        current_app.logger.warning(f'修改密码失败：新密码强度不足 - 用户ID: {current_user.id}, IP: {client_ip}')
-        return jsonify({'error': error_msg}), 400
+    # 更新密码
+    current_user.password_hash = get_password_hash(password_data.new_password)
+    db.commit()
     
-    try:
-        # 更新密码
-        current_user.set_password(new_password)
-        db.session.commit()
-        
-        log_user_action('密码修改', current_user.id, f'用户名: {current_user.username}')
-        
-        return jsonify({'message': '密码修改成功！'}), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f'修改密码失败：数据库错误 - 用户ID: {current_user.id}, IP: {client_ip}, 错误: {str(e)}')
-        return jsonify({'error': '密码修改失败，请稍后重试'}), 500
+    return {"message": "密码修改成功"}
 
-@bp.route('/auth/check', methods=['GET'])
-def api_check_auth():
-    """检查认证状态API"""
-    client_ip = get_client_ip()
-    
-    # 添加更详细的会话调试信息
-    from flask import session, request
-    cookies = dict(request.cookies)
-    current_app.logger.debug(f'会话调试 - Session ID: {session.get("_id", "无")}, 用户ID: {session.get("_user_id", "无")}, IP: {client_ip}')
-    current_app.logger.debug(f'Cookie调试 - 收到的Cookies: {cookies}')
-    
-    if current_user.is_authenticated:
-        current_app.logger.debug(f'认证状态检查：已认证 - 用户ID: {current_user.id}, IP: {client_ip}')
-        return jsonify({
-            'authenticated': True,
-            'user': current_user.to_dict()
-        }), 200
-    else:
-        current_app.logger.debug(f'认证状态检查：未认证 - IP: {client_ip}')
-        return jsonify({
-            'authenticated': False,
-            'user': None
-        }), 200
+@router.get("/check")
+async def check_auth(current_user: User = Depends(get_current_user)):
+    """检查认证状态"""
+    return {
+        "authenticated": True,
+        "user": {
+            "id": current_user.id,
+            "username": current_user.username,
+            "email": current_user.email
+        }
+    }

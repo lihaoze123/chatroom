@@ -17,6 +17,7 @@ interface ChatState {
 
 interface ChatContextType extends ChatState {
   joinRoom: (roomId: number, password?: string) => Promise<void>;
+  enterRoom: (roomId: number) => Promise<void>;
   leaveRoom: (roomId: number) => Promise<void>;
   sendMessage: (message: string, messageType?: string, fileInfo?: any) => void;
   loadMessages: (roomId: number) => Promise<void>;
@@ -253,6 +254,28 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     }
   }, [loadMessages]);
 
+  const enterRoom = useCallback(async (roomId: number): Promise<void> => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      
+      // 获取房间信息（用户已经是成员，不需要调用joinRoom API）
+      const room = await chatAPI.getRoom(roomId);
+      dispatch({ type: 'SET_CURRENT_ROOM', payload: room });
+      
+      // 加载消息
+      await loadMessages(roomId);
+      
+      // 加入Socket房间
+      socketService.joinRoom(roomId);
+      
+      dispatch({ type: 'SET_LOADING', payload: false });
+    } catch (error) {
+      console.error('Enter room error:', error);
+      toast.error('进入房间失败');
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  }, [loadMessages]);
+
   const leaveRoom = useCallback(async (roomId: number): Promise<void> => {
     try {
       socketService.leaveRoom(roomId);
@@ -297,6 +320,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const value: ChatContextType = {
     ...state,
     joinRoom,
+    enterRoom,
     leaveRoom,
     sendMessage,
     loadMessages,

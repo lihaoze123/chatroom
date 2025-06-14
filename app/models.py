@@ -2,56 +2,58 @@
 # 数据库模型
 
 from datetime import datetime
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import UserMixin
-from werkzeug.security import generate_password_hash, check_password_hash
-from app import db, login_manager
+from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, Date, ForeignKey
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+from app.database import Base
+from app.core.security import get_password_hash, verify_password
 
-class User(UserMixin, db.Model):
+class User(Base):
     """用户模型"""
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False, index=True)
-    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
-    password_hash = db.Column(db.String(255), nullable=False)
-    avatar_url = db.Column(db.String(255), default='')
-    is_online = db.Column(db.Boolean, default=False)
-    last_seen = db.Column(db.DateTime, default=datetime.utcnow)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    __tablename__ = "users"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(80), unique=True, nullable=False, index=True)
+    email = Column(String(120), unique=True, nullable=False, index=True)
+    password_hash = Column(String(255), nullable=False)
+    avatar_url = Column(String(255), default='')
+    is_online = Column(Boolean, default=False)
+    last_seen = Column(DateTime, default=func.now())
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     # 扩展个人信息字段
-    real_name = db.Column(db.String(100), default='')
-    phone = db.Column(db.String(20), default='')
-    address = db.Column(db.Text, default='')
-    bio = db.Column(db.Text, default='')
-    gender = db.Column(db.String(10), default='')
-    birthday = db.Column(db.Date, nullable=True)
-    occupation = db.Column(db.String(100), default='')
-    website = db.Column(db.String(255), default='')
+    real_name = Column(String(100), default='')
+    phone = Column(String(20), default='')
+    address = Column(Text, default='')
+    bio = Column(Text, default='')
+    gender = Column(String(10), default='')
+    birthday = Column(Date, nullable=True)
+    occupation = Column(String(100), default='')
+    website = Column(String(255), default='')
     
     # 关系
-    messages = db.relationship('Message', backref='author', lazy='dynamic', cascade='all, delete-orphan')
-    room_memberships = db.relationship('RoomMembership', backref='user', lazy='dynamic', cascade='all, delete-orphan')
+    messages = relationship('Message', back_populates='author', cascade='all, delete-orphan')
+    room_memberships = relationship('RoomMembership', back_populates='user', cascade='all, delete-orphan')
+    created_rooms = relationship('Room', back_populates='creator')
     
     def set_password(self, password):
         """设置密码哈希"""
-        self.password_hash = generate_password_hash(password)
+        self.password_hash = get_password_hash(password)
     
     def check_password(self, password):
         """检查密码"""
-        return check_password_hash(self.password_hash, password)
+        return verify_password(password, self.password_hash)
     
     def update_last_seen(self):
         """更新最后在线时间"""
         self.last_seen = datetime.utcnow()
-        db.session.commit()
     
     def set_online_status(self, is_online):
         """设置在线状态"""
         self.is_online = is_online
         if not is_online:
             self.last_seen = datetime.utcnow()
-        db.session.commit()
     
     def to_dict(self):
         """转换为字典"""
@@ -77,65 +79,67 @@ class User(UserMixin, db.Model):
     def __repr__(self):
         return f'<User {self.username}>'
 
-class Room(db.Model):
+class Room(Base):
     """聊天室模型"""
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), unique=True, nullable=False, index=True)
-    description = db.Column(db.Text, default='')
-    is_private = db.Column(db.Boolean, default=False)
-    password_hash = db.Column(db.String(255), nullable=True)  # 添加密码哈希字段
-    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    __tablename__ = "rooms"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), unique=True, nullable=False, index=True)
+    description = Column(Text, default='')
+    is_private = Column(Boolean, default=False)
+    password_hash = Column(String(255), nullable=True)
+    created_by = Column(Integer, ForeignKey('users.id'), nullable=False)
+    created_at = Column(DateTime, default=func.now())
     
     # 关系
-    messages = db.relationship('Message', backref='room', lazy='dynamic', cascade='all, delete-orphan')
-    memberships = db.relationship('RoomMembership', backref='room', lazy='dynamic', cascade='all, delete-orphan')
-    creator = db.relationship('User', backref='created_rooms')
+    messages = relationship('Message', back_populates='room', cascade='all, delete-orphan')
+    memberships = relationship('RoomMembership', back_populates='room', cascade='all, delete-orphan')
+    creator = relationship('User', back_populates='created_rooms')
     
     
-    #新加
     def set_password(self, raw_password):
         """设置聊天室密码（仅私密房间用）"""
-        self.password_hash = generate_password_hash(raw_password)
+        self.password_hash = get_password_hash(raw_password)
 
     def check_password(self, raw_password):
         """检查聊天室密码是否正确"""
         if not self.password_hash:
             return False
-        return check_password_hash(self.password_hash, raw_password)
+        return verify_password(raw_password, self.password_hash)
     
     
-    def get_members(self):
+    def get_members(self, db_session):
         """获取房间成员"""
-        return User.query.join(RoomMembership).filter(RoomMembership.room_id == self.id).all()
+        return db_session.query(User).join(RoomMembership).filter(RoomMembership.room_id == self.id).all()
     
-    def get_online_members(self):
+    def get_online_members(self, db_session):
         """获取在线成员"""
-        return User.query.join(RoomMembership).filter(
+        return db_session.query(User).join(RoomMembership).filter(
             RoomMembership.room_id == self.id,
             User.is_online == True
         ).all()
     
-    def add_member(self, user):
+    def add_member(self, user, db_session):
         """添加成员"""
-        if not self.is_member(user):
+        if not self.is_member(user, db_session):
             membership = RoomMembership(user_id=user.id, room_id=self.id)
-            db.session.add(membership)
-            # 不在这里提交，让调用者决定何时提交
+            db_session.add(membership)
     
-    def remove_member(self, user):
+    def remove_member(self, user, db_session):
         """移除成员"""
-        membership = RoomMembership.query.filter_by(user_id=user.id, room_id=self.id).first()
+        membership = db_session.query(RoomMembership).filter_by(user_id=user.id, room_id=self.id).first()
         if membership:
-            db.session.delete(membership)
-            # 不在这里提交，让调用者决定何时提交
+            db_session.delete(membership)
     
-    def is_member(self, user):
+    def is_member(self, user, db_session):
         """检查是否为成员"""
-        return RoomMembership.query.filter_by(user_id=user.id, room_id=self.id).first() is not None
+        return db_session.query(RoomMembership).filter_by(user_id=user.id, room_id=self.id).first() is not None
     
-    def to_dict(self):
+    def to_dict(self, db_session=None):
         """转换为字典"""
+        member_count = len(self.memberships) if self.memberships else 0
+        online_count = len(self.get_online_members(db_session)) if db_session else 0
+        
         return {
             'id': self.id,
             'name': self.name,
@@ -143,37 +147,46 @@ class Room(db.Model):
             'is_private': self.is_private,
             'created_by': self.created_by,
             'created_at': self.created_at.isoformat() if self.created_at else None,
-            'member_count': self.memberships.count(),
-            'online_count': len(self.get_online_members())
+            'member_count': member_count,
+            'online_count': online_count
         }
     
     def __repr__(self):
         return f'<Room {self.name}>'
 
-class RoomMembership(db.Model):
+class RoomMembership(Base):
     """房间成员关系模型"""
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    room_id = db.Column(db.Integer, db.ForeignKey('room.id'), nullable=False)
-    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
-    is_admin = db.Column(db.Boolean, default=False)
+    __tablename__ = "room_memberships"
     
-    # 唯一约束
-    __table_args__ = (db.UniqueConstraint('user_id', 'room_id', name='unique_user_room'),)
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    room_id = Column(Integer, ForeignKey('rooms.id'), nullable=False)
+    joined_at = Column(DateTime, default=func.now())
+    is_admin = Column(Boolean, default=False)
+    
+    # 关系
+    user = relationship('User', back_populates='room_memberships')
+    room = relationship('Room', back_populates='memberships')
     
     def __repr__(self):
         return f'<RoomMembership user_id={self.user_id} room_id={self.room_id}>'
 
-class Message(db.Model):
+class Message(Base):
     """消息模型"""
-    id = db.Column(db.Integer, primary_key=True)
-    content = db.Column(db.Text, nullable=False)
-    message_type = db.Column(db.String(20), default='text')  # text, image, file, system
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    room_id = db.Column(db.Integer, db.ForeignKey('room.id'), nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-    edited_at = db.Column(db.DateTime)
-    is_deleted = db.Column(db.Boolean, default=False)
+    __tablename__ = "messages"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    content = Column(Text, nullable=False)
+    message_type = Column(String(20), default='text')  # text, image, file, system
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    room_id = Column(Integer, ForeignKey('rooms.id'), nullable=False)
+    timestamp = Column(DateTime, default=func.now(), index=True)
+    edited_at = Column(DateTime)
+    is_deleted = Column(Boolean, default=False)
+    
+    # 关系
+    author = relationship('User', back_populates='messages')
+    room = relationship('Room', back_populates='messages')
     
     def to_dict(self):
         """转换为字典"""
@@ -192,8 +205,3 @@ class Message(db.Model):
     
     def __repr__(self):
         return f'<Message {self.id}>'
-
-@login_manager.user_loader
-def load_user(user_id):
-    """Flask-Login用户加载器"""
-    return User.query.get(int(user_id))

@@ -12,11 +12,12 @@ const getSocketURL = (): string => {
   if (process.env.NODE_ENV === 'production' || window.location.hostname !== 'localhost') {
     const protocol = window.location.protocol;
     const hostname = window.location.hostname;
-    return `${protocol}//${hostname}:5000`;
+    // 改为FastAPI端口8000
+    return `${protocol}//${hostname}:8000`;
   }
   
-  // 开发环境默认使用localhost
-  return 'http://localhost:5000';
+  // 开发环境默认使用localhost:8000
+  return 'http://localhost:8000';
 };
 
 class SocketService {
@@ -30,8 +31,14 @@ class SocketService {
 
   connect(): Promise<Socket> {
     return new Promise((resolve, reject) => {
+      // 获取JWT token用于Socket.IO认证
+      const token = localStorage.getItem('access_token');
+      
       this.socket = io(this.url, {
-        withCredentials: true,
+        // 移除withCredentials，使用JWT认证
+        auth: {
+          token: token
+        },
         transports: ['polling', 'websocket'],
         timeout: 20000,
         forceNew: true,
