@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import os
+import sys
 from pathlib import Path
 
 from app.config import settings
@@ -13,6 +14,17 @@ from app.database import engine, Base
 from app.api import auth, rooms, messages, upload
 from app.socket.events import sio
 import socketio
+
+def get_resource_path(relative_path):
+    """获取资源文件的绝对路径，支持PyInstaller打包"""
+    try:
+        # PyInstaller创建临时文件夹，并将路径存储在_MEIPASS中
+        base_path = sys._MEIPASS
+    except AttributeError:
+        # 开发环境中使用当前目录
+        base_path = os.path.abspath(".")
+    
+    return os.path.join(base_path, relative_path)
 
 # 创建数据库表
 Base.metadata.create_all(bind=engine)
@@ -58,8 +70,8 @@ upload_dir.mkdir(exist_ok=True)
 if upload_dir.exists():
     app.mount("/uploads", StaticFiles(directory=str(upload_dir)), name="uploads")
 
-# 前端静态文件服务
-frontend_build_dir = Path("frontend/build")
+# 前端静态文件服务 - 使用资源路径
+frontend_build_dir = Path(get_resource_path("frontend/build"))
 if frontend_build_dir.exists():
     app.mount("/static", StaticFiles(directory=str(frontend_build_dir / "static")), name="static")
 

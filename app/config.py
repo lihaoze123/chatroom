@@ -1,6 +1,7 @@
 import os
 from typing import List
 from pydantic_settings import BaseSettings
+from pathlib import Path
 
 class Settings(BaseSettings):
     """应用配置"""
@@ -13,6 +14,29 @@ class Settings(BaseSettings):
     
     # 数据库配置
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./instance/chatroom.db")
+    
+    def model_post_init(self, __context):
+        """模型初始化后处理，确保必要的目录存在"""
+        # 确保数据库目录存在（仅对SQLite数据库）
+        if "sqlite" in self.DATABASE_URL and ":///" in self.DATABASE_URL:
+            # 提取数据库文件路径
+            db_path = self.DATABASE_URL.split("///", 1)[1]
+            if db_path.startswith("./"):
+                db_path = db_path[2:]  # 移除 "./" 前缀
+            
+            # 获取数据库文件的目录
+            db_dir = Path(db_path).parent
+            
+            # 创建目录（如果不存在）
+            db_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 确保日志目录存在
+        log_dir = Path(self.LOG_FILE).parent
+        log_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 确保上传目录存在
+        upload_dir = Path(self.UPLOAD_DIR)
+        upload_dir.mkdir(parents=True, exist_ok=True)
     
     # JWT配置
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
