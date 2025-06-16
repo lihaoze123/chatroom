@@ -73,7 +73,10 @@ if upload_dir.exists():
 # 前端静态文件服务 - 使用资源路径
 frontend_build_dir = Path(get_resource_path("frontend/build"))
 if frontend_build_dir.exists():
-    app.mount("/static", StaticFiles(directory=str(frontend_build_dir / "static")), name="static")
+    # Vite 使用 assets 目录而不是 static 目录
+    assets_dir = frontend_build_dir / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
 
 # 前端路由处理
 @app.get("/{path:path}")
@@ -83,8 +86,8 @@ async def serve_frontend(path: str):
     if path.startswith("api/") or path.startswith("uploads/") or path.startswith("socket.io/"):
         return {"error": "Not found"}, 404
     
-    # 处理静态文件请求（CSS、JS、图片等）
-    if path.startswith("static/"):
+    # 处理静态文件请求（CSS、JS、图片等）- Vite 使用 assets 目录
+    if path.startswith("assets/"):
         file_path = frontend_build_dir / path
         if file_path.exists() and file_path.is_file():
             return FileResponse(str(file_path))
