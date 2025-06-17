@@ -186,20 +186,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeaveRoom }) => {
               </motion.div>
             </SimpleTooltip>
 
-            {/* 设置按钮 - 桌面端显示 */}
-            <SimpleTooltip content="聊天室设置">
-              <motion.div
-                whileTap={{ scale: 0.95 }}
-              >
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="hidden md:inline-flex"
-                >
-                  <Settings className="h-4 w-4" />
-                </Button>
-              </motion.div>
-            </SimpleTooltip>
+
 
             {/* 退出登录 */}
             <SimpleTooltip content="退出聊天室">

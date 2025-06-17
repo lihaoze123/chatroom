@@ -210,7 +210,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, di
           <form onSubmit={handleSubmit} className="flex items-center gap-2 sm:gap-3">
             {/* 输入框 */}
             <motion.div 
-              className="flex-1 relative"
+              className="flex-1 relative flex items-center"
               animate={{ 
                 scale: isFocused ? 1.01 : 1,
               }}

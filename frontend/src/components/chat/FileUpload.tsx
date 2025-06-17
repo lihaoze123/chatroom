@@ -65,7 +65,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUploaded, disabled }) => 
   };
 
   return (
-    <div className="flex gap-1">
+    <div className="flex gap-2 sm:gap-3">
       {/* 图片上传 */}
       <Button
         type="button"
