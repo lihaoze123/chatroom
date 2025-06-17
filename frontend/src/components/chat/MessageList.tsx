@@ -278,7 +278,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, typingUsers }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="flex items-center justify-center h-full text-muted-foreground"
+            className="flex items-center justify-center min-h-[calc(100vh-200px)] text-muted-foreground"
           >
             <div className="text-center px-4">
               <motion.div 

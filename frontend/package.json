@@ -44,6 +44,8 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "devDependencies": {
+    "@stagewise/toolbar": "^0.4.8",
+    "@stagewise/toolbar-react": "^0.4.8",
     "@testing-library/jest-dom": "^6.6.3",
     "@types/node": "^24.0.3",
     "@vitejs/plugin-react": "^4.5.2",
