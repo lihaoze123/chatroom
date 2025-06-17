@@ -411,6 +411,8 @@ const RoomList: React.FC<RoomListProps> = ({ onRoomSelect, selectedRoomId }) => 
               } catch (err) {
                 console.error('Password error:', err);
                 toast.error('密码错误或无法加入该房间');
+                // 密码错误时不要关闭弹窗，让用户重新输入
+                // 不执行 onRoomSelect，不关闭弹窗，不清除 pendingRoom
               }
             }}
           />

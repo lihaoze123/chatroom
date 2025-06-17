@@ -251,6 +251,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       console.error('Join room error:', error);
       toast.error('加入房间失败');
       dispatch({ type: 'SET_LOADING', payload: false });
+      // 重新抛出异常，让调用者知道操作失败
+      throw error;
     }
   }, [loadMessages]);
 

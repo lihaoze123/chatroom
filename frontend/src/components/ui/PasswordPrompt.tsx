@@ -28,9 +28,13 @@ const PasswordPrompt: React.FC<PasswordPromptProps> = ({
     setIsSubmitting(true);
     try {
       await onSubmit(password);
+      // 只有成功时才清除密码
+      setPassword('');
+    } catch (error) {
+      // 失败时不清除密码，让用户可以修改后重试
+      console.error('Password submit error:', error);
     } finally {
       setIsSubmitting(false);
-      setPassword('');
     }
   };
 
